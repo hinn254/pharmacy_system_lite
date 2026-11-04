@@ -1,0 +1,1169 @@
+// Pharmacy management — multi-tenant (Organization); PostgreSQL
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  CASHIER
+  PHARM_TECH
+  ADMIN
+  DOCTOR
+}
+
+enum DrugStatus {
+  ACTIVE
+  DISCONTINUED
+  RECALLED
+}
+
+enum PrescriptionClass {
+  OTC
+  RX
+}
+
+enum StockMovementType {
+  SALE
+  ADJUSTMENT
+  RECEIPT
+  RETURN
+  VOID_RESTOCK
+}
+
+enum SaleStatus {
+  COMPLETED
+  VOIDED
+}
+
+enum PaymentMethod {
+  CASH
+  MPESA_STK
+  MPESA_MANUAL
+  INSURANCE
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+enum PosOrderStatus {
+  QUEUED
+  IN_PROGRESS
+  FINALIZED
+  READY_TO_DISPENSE
+  DISPENSED
+  CANCELLED
+}
+
+enum MpesaManualType {
+  PAYBILL
+  TILL
+}
+
+enum EtimsComplianceStatus {
+  NOT_APPLICABLE
+  PENDING
+  SUBMITTED
+  ACKNOWLEDGED
+  ERROR
+}
+
+enum DiscountValueType {
+  PERCENT
+  FIXED
+}
+
+enum DiscountScopeType {
+  ALL_DRUGS
+  DRUGS
+}
+
+enum DiscountPatientSegment {
+  ANY
+  NEW_PATIENT
+  RETURNING_PATIENT
+}
+
+enum ConsultationCaseStatus {
+  OPEN
+  ASSIGNED
+  IN_CONSULT
+  READY_FOR_PHARMTECH
+  READY_FOR_CASHIER
+  CLOSED
+  CANCELLED
+}
+
+enum ConsultationMedicationOrderStatus {
+  DRAFT
+  SENT_TO_PHARMTECH
+  SENT_TO_CASHIER
+  DISPENSED
+  CANCELLED
+}
+
+enum ConsultationPricingMode {
+  CASH
+  INSURANCE
+}
+
+enum InsuranceInvoiceStatus {
+  DRAFT
+  SUBMITTED
+  PARTIALLY_PAID
+  PAID
+  VOIDED
+}
+
+enum SupplierBillStatus {
+  UNPAID
+  PARTIALLY_PAID
+  PAID
+  VOIDED
+}
+
+enum SupplierPaymentMethod {
+  CASH
+  MPESA
+  BANK
+  OTHER
+}
+
+enum ExpenseCategory {
+  RENT
+  SALARIES
+  UTILITIES
+  TRANSPORT
+  SUPPLIES
+  MAINTENANCE
+  MARKETING
+  TAXES
+  OTHER
+}
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users            User[]
+  settings         OrganizationSettings?
+  suppliers        Supplier[]
+  drugs            Drug[]
+  drugBatches      DrugBatch[]
+  stockMoves       StockMovement[]
+  patients         Patient[]
+  sales            Sale[]
+  posOrders        PosOrder[]
+  auditLogs        AuditLog[]
+  mpesaTxns        MpesaTransaction[]
+  offlineQueue     OfflineSyncQueue[]
+  promoCampaigns   PromoCampaign[]
+  insuranceSchemes InsuranceScheme[]
+  aiChatLogs       AiChatLog[]
+  discountCodes    DiscountCode[]
+  saleDiscounts    SaleDiscount[]
+  drugCategories   DrugCategory[]
+
+  insuranceInvoices InsuranceInvoice[]
+  supplierBills     SupplierBill[]
+  supplierPayments  SupplierPayment[]
+  expenses          Expense[]
+
+  doctorProfiles               DoctorProfile[]
+  consultationCases            ConsultationCase[]
+  consultationEncounters       ConsultationEncounter[]
+  consultationMedicationOrders ConsultationMedicationOrder[]
+  consultationCheckouts        ConsultationCheckout[]
+}
+
+model DrugCategory {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  name String
+  slug String
+
+  drugs DrugCategoryOnDrug[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([organizationId, slug])
+  @@index([organizationId, name])
+}
+
+model OrganizationSettings {
+  id    String       @id @default(cuid())
+  orgId String       @unique
+  org   Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  // Business profile (shown on receipts, invoices, etc.)
+  businessName    String?
+  businessTagline String?
+  website         String?
+  phoneNumber     String?
+  email           String?
+  logoUrl         String?
+
+  /**
+   * DrugCategory ids that mark “controlled / DDA” drugs for this org (zero or more).
+   * Category membership is enforced in application code (must belong to org).
+   */
+  controlledDrugCategoryIds String[] @default([])
+
+  taxRatePercent      Decimal @default(16) @db.Decimal(6, 2)
+  receiptHeader       String?
+  receiptFooter       String?
+  invoiceTemplate     Json?
+  defaultLowStockDays Int? // default window for expiry alerts (e.g. 90)
+  mpesaEnvironment    String  @default("sandbox") // sandbox | production
+  // Daraja consumer key/secret stored in env, not DB
+  insuranceNotes      String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model User {
+  id             String       @id @default(cuid())
+  email          String       @unique
+  passwordHash   String
+  name           String?
+  role           UserRole     @default(CASHIER)
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  bannedAt       DateTime?
+  deletedAt      DateTime?
+
+  auditLogs         AuditLog[]
+  stockMovements    StockMovement[]    @relation("StockMovementUser")
+  salesCreated      Sale[]             @relation("SaleCreatedBy")
+  salesVoided       Sale[]             @relation("SaleVoidedBy")
+  posOrdersCreated  PosOrder[]         @relation("PosOrderCreatedBy")
+  posOrdersPicked   PosOrder[]         @relation("PosOrderPickedBy")
+  batchesDeleted    DrugBatch[]        @relation("DrugBatchDeletedBy")
+  mpesaTransactions MpesaTransaction[]
+  aiChatLogs        AiChatLog[]
+
+  doctorProfile DoctorProfile?
+
+  consultationCasesCreated      ConsultationCase[]      @relation("ConsultationCaseCreatedBy")
+  consultationCasesAssigned     ConsultationCase[]      @relation("ConsultationCaseAssignedDoctor")
+  consultationEncountersCreated ConsultationEncounter[] @relation("ConsultationEncounterCreatedBy")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId])
+}
+
+model DoctorProfile {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  speciality          String?
+  consultFeeCash      Decimal @db.Decimal(12, 2)
+  consultFeeInsurance Decimal @db.Decimal(12, 2)
+  isActive            Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId, isActive])
+}
+
+model ConsultationCase {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  patientId String
+  patient   Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  createdById String
+  createdBy   User   @relation("ConsultationCaseCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+
+  assignedDoctorId String?
+  assignedDoctor   User?   @relation("ConsultationCaseAssignedDoctor", fields: [assignedDoctorId], references: [id], onDelete: SetNull)
+
+  status ConsultationCaseStatus @default(OPEN)
+
+  encounters       ConsultationEncounter[]
+  medicationOrders ConsultationMedicationOrder[]
+  checkout         ConsultationCheckout?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId, status, createdAt])
+  @@index([organizationId, patientId, createdAt])
+  @@index([organizationId, assignedDoctorId, status])
+}
+
+model ConsultationEncounter {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  caseId String
+  case   ConsultationCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  createdById String
+  createdBy   User   @relation("ConsultationEncounterCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+
+  temperatureC Decimal? @db.Decimal(6, 2)
+  weightKg     Decimal? @db.Decimal(6, 2)
+  heightCm     Decimal? @db.Decimal(6, 2)
+  bpSystolic   Int?
+  bpDiastolic  Int?
+  pulseBpm     Int?
+  spo2Percent  Int?
+  respRate     Int?
+
+  chiefComplaint String?
+  assessment     String?
+  plan           String?
+  notes          String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId, caseId, createdAt])
+  @@index([createdById, createdAt])
+}
+
+model ConsultationMedicationOrder {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  caseId String
+  case   ConsultationCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  drugId String?
+  drug   Drug?   @relation(fields: [drugId], references: [id], onDelete: Restrict)
+
+  /// When `drugId` is null, doctor entered a free-text medication (may be bought outside).
+  externalDrugName String?
+  /// If true, this medication is intended for outside purchase and should not be sold in POS.
+  fulfillOutside   Boolean @default(false)
+
+  quantity     Int
+  instructions String?
+
+  status ConsultationMedicationOrderStatus @default(DRAFT)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId, caseId, status])
+  @@index([organizationId, drugId])
+}
+
+model ConsultationCheckout {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  caseId String           @unique
+  case   ConsultationCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  buyInPharmacy Boolean                 @default(true)
+  pricingMode   ConsultationPricingMode
+
+  consultationFee Decimal @db.Decimal(12, 2)
+  medsSubtotal    Decimal @db.Decimal(12, 2)
+  taxAmount       Decimal @db.Decimal(12, 2)
+  totalDue        Decimal @db.Decimal(12, 2)
+
+  cashierSaleId String? @unique
+  cashierSale   Sale?   @relation(fields: [cashierSaleId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId, createdAt])
+  @@index([cashierSaleId])
+}
+
+model AiChatLog {
+  id               String       @id @default(cuid())
+  organizationId   String
+  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId           String
+  user             User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pageContext      String
+  userMessage      String       @db.Text
+  assistantMessage String?      @db.Text
+  model            String?
+  metadata         Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([organizationId, createdAt])
+  @@index([userId])
+}
+
+model AuditLog {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String?
+  user           User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action         String
+  entityType     String
+  entityId       String?
+  metadata       Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([organizationId, createdAt])
+}
+
+model Supplier {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  phone          String?
+  email          String?
+  address        String?
+  speciality     String?
+
+  drugBatches DrugBatch[]
+  bills       SupplierBill[]
+  payments    SupplierPayment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId])
+}
+
+model Drug {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  internalCode    String
+  barcode         String?
+  genericName     String
+  brandName       String?
+  dosageForm      String
+  strengthValue   String?
+  strengthUnit    String?
+  routeOfAdmin    String?
+  packDescription String?
+  unitsPerPack    Int?
+
+  therapeuticCategory String?
+  atcCode             String?
+
+  prescriptionClass  PrescriptionClass @default(OTC)
+  controlledSchedule String? // e.g. none, C — align with local law
+
+  manufacturer    String?
+  mahDistributor  String?
+  countryOfOrigin String?
+
+  storageConditions String?
+
+  /// How the patient should take the medicine (sig / directions for the label)
+  patientDirections String @default("")
+
+  priceCash      Decimal  @db.Decimal(12, 2)
+  priceInsurance Decimal  @db.Decimal(12, 2)
+  buyingPrice    Decimal? @db.Decimal(12, 2)
+  costLast       Decimal? @db.Decimal(12, 2)
+
+  reorderLevel Int?
+  maxStock     Int?
+
+  status DrugStatus @default(ACTIVE)
+
+  batches                      DrugBatch[]
+  stockMoves                   StockMovement[]
+  saleLines                    SaleLine[]
+  posOrderLines                PosOrderLine[]
+  prescriptionItems            PrescriptionItem[]
+  discountCodeDrugs            DiscountCodeDrug[]
+  consultationMedicationOrders ConsultationMedicationOrder[]
+  categories                   DrugCategoryOnDrug[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([organizationId, internalCode])
+  @@index([organizationId, genericName])
+  @@index([organizationId, barcode])
+}
+
+model DrugCategoryOnDrug {
+  id         String       @id @default(cuid())
+  drugId     String
+  drug       Drug         @relation(fields: [drugId], references: [id], onDelete: Cascade)
+  categoryId String
+  category   DrugCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([drugId, categoryId])
+  @@index([drugId])
+  @@index([categoryId])
+}
+
+model DrugBatch {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  drugId         String
+  drug           Drug         @relation(fields: [drugId], references: [id], onDelete: Cascade)
+
+  batchNumber    String
+  expiryDate     DateTime
+  quantityOnHand Int       @default(0)
+  supplierId     String?
+  supplier       Supplier? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  receivedAt     DateTime  @default(now())
+  purchaseRef    String?
+  unitCost       Decimal?  @db.Decimal(12, 2)
+
+  // Soft delete: removed from POS/allocations immediately, retained for purge window.
+  deletedAt     DateTime?
+  deletedReason String?
+  deletedById   String?
+  deletedBy     User?     @relation("DrugBatchDeletedBy", fields: [deletedById], references: [id], onDelete: SetNull)
+
+  stockMoves      StockMovement[]
+  saleLineBatches SaleLineBatch[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([drugId, batchNumber])
+  @@index([organizationId, expiryDate])
+  @@index([drugId])
+  @@index([organizationId, deletedAt])
+}
+
+model StockMovement {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  type     StockMovementType
+  drugId   String
+  drug     Drug              @relation(fields: [drugId], references: [id], onDelete: Cascade)
+  batchId  String
+  batch    DrugBatch         @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  quantity Int // positive = in, negative = out
+  reason   String?
+
+  saleId String?
+  sale   Sale?   @relation(fields: [saleId], references: [id], onDelete: SetNull)
+
+  createdById String?
+  createdBy   User?   @relation("StockMovementUser", fields: [createdById], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+
+  @@index([organizationId, createdAt])
+  @@index([batchId])
+}
+
+model Patient {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  fullName         String
+  phone            String?
+  email            String?
+  dob              DateTime?
+  notes            String?
+  marketingConsent Boolean   @default(false)
+
+  prescriptions        Prescription[]
+  sales                Sale[]
+  posOrders            PosOrder[]
+  consultationCases    ConsultationCase[]
+  discountCodePatients DiscountCodePatient[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId, phone])
+}
+
+model Prescription {
+  id        String  @id @default(cuid())
+  patientId String
+  patient   Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  prescriberName String?
+  rxNumber       String?
+  issuedAt       DateTime?
+  refillDueAt    DateTime?
+  notes          String?
+  status         String    @default("active")
+
+  items PrescriptionItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([patientId])
+  @@index([refillDueAt])
+}
+
+model PrescriptionItem {
+  id             String       @id @default(cuid())
+  prescriptionId String
+  prescription   Prescription @relation(fields: [prescriptionId], references: [id], onDelete: Cascade)
+  drugId         String
+  drug           Drug         @relation(fields: [drugId], references: [id], onDelete: Restrict)
+  quantity       Int
+  instructions   String?
+
+  @@index([prescriptionId])
+}
+
+model DiscountCode {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  code      String
+  name      String
+  active    Boolean @default(true)
+  stackable Boolean @default(true)
+  priority  Int     @default(0)
+
+  valueType    DiscountValueType
+  valuePercent Decimal?          @db.Decimal(6, 2)
+  valueAmount  Decimal?          @db.Decimal(12, 2)
+
+  scopeType DiscountScopeType  @default(ALL_DRUGS)
+  drugs     DiscountCodeDrug[]
+
+  patientSegment DiscountPatientSegment @default(ANY)
+  sessionTag     String?
+  patients       DiscountCodePatient[]
+
+  startsAt  DateTime?
+  endsAt    DateTime?
+  expiresAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  saleDiscounts SaleDiscount[]
+
+  @@unique([organizationId, code])
+  @@index([organizationId, active])
+  @@index([organizationId, sessionTag])
+}
+
+model DiscountCodeDrug {
+  id             String       @id @default(cuid())
+  discountCodeId String
+  discountCode   DiscountCode @relation(fields: [discountCodeId], references: [id], onDelete: Cascade)
+
+  drugId String
+  drug   Drug   @relation(fields: [drugId], references: [id], onDelete: Cascade)
+
+  @@unique([discountCodeId, drugId])
+  @@index([drugId])
+}
+
+model DiscountCodePatient {
+  id             String       @id @default(cuid())
+  discountCodeId String
+  discountCode   DiscountCode @relation(fields: [discountCodeId], references: [id], onDelete: Cascade)
+
+  patientId String
+  patient   Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@unique([discountCodeId, patientId])
+  @@index([patientId])
+}
+
+model Sale {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  saleNumber Int
+  patientId  String?
+  patient    Patient? @relation(fields: [patientId], references: [id], onDelete: SetNull)
+
+  subtotal            Decimal  @db.Decimal(12, 2)
+  discountAmount      Decimal  @default(0) @db.Decimal(12, 2)
+  totalBeforeDiscount Decimal? @db.Decimal(12, 2)
+  taxAmount           Decimal  @db.Decimal(12, 2)
+  total               Decimal  @db.Decimal(12, 2)
+
+  status     SaleStatus @default(COMPLETED)
+  voidReason String?
+  voidedAt   DateTime?
+  voidedById String?
+  voidedBy   User?      @relation("SaleVoidedBy", fields: [voidedById], references: [id], onDelete: SetNull)
+
+  createdById String
+  createdBy   User   @relation("SaleCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+
+  // KRA / eTIMS — extensible
+  etimsStatus      EtimsComplianceStatus @default(NOT_APPLICABLE)
+  kraInvoiceNumber String?
+  etimsReference   String?
+  etimsPayload     Json?
+  taxableAmount    Decimal?              @db.Decimal(12, 2)
+  taxRateSnapshot  Decimal?              @db.Decimal(6, 2)
+
+  lines             SaleLine[]
+  serviceLines      SaleServiceLine[]
+  payments          Payment[]
+  discounts         SaleDiscount[]
+  stockMoves        StockMovement[]
+  mpesaTransactions MpesaTransaction[]
+
+  consultationCheckout ConsultationCheckout?
+  posOrder             PosOrder?
+
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  insuranceInvoiceLines InsuranceInvoiceLine[]
+
+  @@unique([organizationId, saleNumber])
+  @@index([organizationId, createdAt])
+}
+
+model SaleServiceLine {
+  id     String @id @default(cuid())
+  saleId String
+  sale   Sale   @relation(fields: [saleId], references: [id], onDelete: Cascade)
+
+  description        String
+  quantity           Int
+  unitPrice          Decimal @db.Decimal(12, 2)
+  lineTotal          Decimal @db.Decimal(12, 2)
+  usedInsurancePrice Boolean @default(false)
+
+  @@index([saleId])
+}
+
+model SaleDiscount {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  saleId String
+  sale   Sale   @relation(fields: [saleId], references: [id], onDelete: Cascade)
+
+  discountCodeId String?
+  discountCode   DiscountCode? @relation(fields: [discountCodeId], references: [id], onDelete: SetNull)
+
+  codeSnapshot         String
+  nameSnapshot         String
+  valueTypeSnapshot    DiscountValueType
+  valuePercentSnapshot Decimal?          @db.Decimal(6, 2)
+  valueAmountSnapshot  Decimal?          @db.Decimal(12, 2)
+
+  appliedAmount Decimal @db.Decimal(12, 2)
+  sortOrder     Int
+
+  createdAt DateTime @default(now())
+
+  @@index([organizationId, createdAt])
+  @@index([saleId])
+  @@index([discountCodeId])
+}
+
+model SaleLine {
+  id     String @id @default(cuid())
+  saleId String
+  sale   Sale   @relation(fields: [saleId], references: [id], onDelete: Cascade)
+
+  drugId             String
+  drug               Drug    @relation(fields: [drugId], references: [id], onDelete: Restrict)
+  quantity           Int
+  unitPrice          Decimal @db.Decimal(12, 2)
+  lineTotal          Decimal @db.Decimal(12, 2)
+  usedInsurancePrice Boolean @default(false)
+  directionsOverride String?
+
+  batchAllocations SaleLineBatch[]
+
+  @@index([saleId])
+}
+
+model SaleLineBatch {
+  id         String    @id @default(cuid())
+  saleLineId String
+  saleLine   SaleLine  @relation(fields: [saleLineId], references: [id], onDelete: Cascade)
+  batchId    String
+  batch      DrugBatch @relation(fields: [batchId], references: [id], onDelete: Restrict)
+  quantity   Int
+
+  @@index([saleLineId])
+  @@index([batchId])
+}
+
+model Payment {
+  id     String @id @default(cuid())
+  saleId String
+  sale   Sale   @relation(fields: [saleId], references: [id], onDelete: Cascade)
+
+  method PaymentMethod
+  amount Decimal       @db.Decimal(12, 2)
+  status PaymentStatus @default(COMPLETED)
+
+  mpesaCheckoutRequestId String?
+  mpesaReceiptNumber     String?
+  mpesaPhoneNumber       String?
+
+  mpesaManualType     MpesaManualType?
+  mpesaManualRef      String?
+  mpesaBusinessNumber String?
+
+  insuranceMemberRef String?
+  insurancePolicyRef String?
+
+  insuranceSchemeId String?
+  insuranceScheme   InsuranceScheme? @relation(fields: [insuranceSchemeId], references: [id], onDelete: SetNull)
+
+  createdAt            DateTime              @default(now())
+  insuranceInvoiceLine InsuranceInvoiceLine?
+
+  @@index([saleId])
+  @@index([insuranceSchemeId])
+}
+
+model InsuranceScheme {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  name     String
+  code     String
+  email    String?
+  phone    String?
+  notes    String?
+  isActive Boolean @default(true)
+
+  payments          Payment[]
+  posOrders         PosOrder[]
+  insuranceInvoices InsuranceInvoice[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([organizationId, code])
+  @@index([organizationId, isActive])
+}
+
+model PosOrder {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  orderNumber Int?
+
+  status PosOrderStatus @default(QUEUED)
+
+  patientId String?
+  patient   Patient? @relation(fields: [patientId], references: [id], onDelete: SetNull)
+
+  prescriptionPhotoUrl String?
+
+  selectedPaymentMethod PaymentMethod
+
+  discountCodesSnapshot Json?
+
+  selectedInsuranceSchemeId String?
+  selectedInsuranceScheme   InsuranceScheme? @relation(fields: [selectedInsuranceSchemeId], references: [id], onDelete: SetNull)
+
+  /// Details captured at queue time (M-Pesa / insurance) for cashier prefill and audit.
+  paymentQueueSnapshot Json?
+
+  subtotalSnapshot       Decimal  @db.Decimal(12, 2)
+  discountAmountSnapshot Decimal  @default(0) @db.Decimal(12, 2)
+  taxAmountSnapshot      Decimal  @db.Decimal(12, 2)
+  totalSnapshot          Decimal  @db.Decimal(12, 2)
+  taxableAmountSnapshot  Decimal? @db.Decimal(12, 2)
+  taxRateSnapshot        Decimal? @db.Decimal(6, 2)
+  vatEnabledSnapshot     Boolean  @default(true)
+
+  createdById String
+  createdBy   User   @relation("PosOrderCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+
+  pickedById String?
+  pickedBy   User?   @relation("PosOrderPickedBy", fields: [pickedById], references: [id], onDelete: SetNull)
+
+  pickedUpAt       DateTime?
+  finalizedAt      DateTime?
+  sentToDispenseAt DateTime?
+  dispensedAt      DateTime?
+
+  saleId String? @unique
+  sale   Sale?   @relation(fields: [saleId], references: [id], onDelete: SetNull)
+
+  lines PosOrderLine[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId, status, createdAt])
+  @@index([organizationId, patientId, createdAt])
+  @@index([organizationId, saleId])
+  @@index([organizationId, createdById, createdAt])
+}
+
+model PosOrderLine {
+  id         String   @id @default(cuid())
+  posOrderId String
+  posOrder   PosOrder @relation(fields: [posOrderId], references: [id], onDelete: Cascade)
+
+  drugId String
+  drug   Drug   @relation(fields: [drugId], references: [id], onDelete: Restrict)
+
+  quantity           Int
+  useInsurancePrice  Boolean @default(false)
+  directionsOverride String?
+
+  unitPriceSnapshot Decimal @db.Decimal(12, 2)
+  lineTotalSnapshot Decimal @db.Decimal(12, 2)
+
+  @@index([posOrderId])
+  @@index([drugId])
+}
+
+model MpesaTransaction {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  checkoutRequestId  String? @unique
+  merchantRequestId  String?
+  amount             Decimal @db.Decimal(12, 2)
+  phoneNumber        String
+  status             String
+  resultCode         Int?
+  resultDesc         String?
+  mpesaReceiptNumber String?
+
+  saleId String?
+  sale   Sale?   @relation(fields: [saleId], references: [id], onDelete: SetNull)
+
+  rawCallback   Json?
+  initiatedById String?
+  initiatedBy   User?   @relation(fields: [initiatedById], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId, createdAt])
+}
+
+model OfflineSyncQueue {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  patientMutationId String    @unique
+  operation         String
+  payload           Json
+  status            String    @default("pending") // pending | synced | conflict | failed
+  errorMessage      String?
+  createdAt         DateTime  @default(now())
+  syncedAt          DateTime?
+
+  @@index([organizationId, status])
+}
+
+model PromoCampaign {
+  id              String       @id @default(cuid())
+  organizationId  String
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name            String
+  messageTemplate String
+  segmentNotes    String?
+  scheduledFor    DateTime?
+  sentAt          DateTime?
+  createdAt       DateTime     @default(now())
+}
+
+model InsuranceInvoice {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  invoiceNumber Int
+  status        InsuranceInvoiceStatus @default(DRAFT)
+
+  insuranceSchemeId String
+  insuranceScheme   InsuranceScheme @relation(fields: [insuranceSchemeId], references: [id], onDelete: Restrict)
+
+  periodFrom DateTime?
+  periodTo   DateTime?
+  notes      String?
+
+  subtotal  Decimal @db.Decimal(12, 2)
+  taxAmount Decimal @default(0) @db.Decimal(12, 2)
+  total     Decimal @db.Decimal(12, 2)
+
+  dueAt       DateTime?
+  submittedAt DateTime?
+  paidAt      DateTime?
+  voidedAt    DateTime?
+  voidReason  String?
+
+  lines    InsuranceInvoiceLine[]
+  payments InsuranceInvoicePayment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([organizationId, invoiceNumber])
+  @@index([organizationId, insuranceSchemeId, createdAt])
+  @@index([organizationId, status, createdAt])
+}
+
+model InsuranceInvoiceLine {
+  id                 String           @id @default(cuid())
+  insuranceInvoiceId String
+  insuranceInvoice   InsuranceInvoice @relation(fields: [insuranceInvoiceId], references: [id], onDelete: Cascade)
+
+  /**
+   * Links to the underlying insurance payment claim. One payment belongs to at most one insurer invoice.
+   */
+  paymentId String  @unique
+  payment   Payment @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+
+  saleId String
+  sale   Sale   @relation(fields: [saleId], references: [id], onDelete: Restrict)
+
+  saleNumber          Int
+  saleCreatedAt       DateTime
+  patientNameSnapshot String?
+  memberRefSnapshot   String?
+  policyRefSnapshot   String?
+
+  amount Decimal @db.Decimal(12, 2)
+
+  @@index([insuranceInvoiceId])
+  @@index([saleId])
+}
+
+model InsuranceInvoicePayment {
+  id                 String           @id @default(cuid())
+  insuranceInvoiceId String
+  insuranceInvoice   InsuranceInvoice @relation(fields: [insuranceInvoiceId], references: [id], onDelete: Cascade)
+
+  amount     Decimal  @db.Decimal(12, 2)
+  receivedAt DateTime @default(now())
+  reference  String?
+  notes      String?
+
+  createdAt DateTime @default(now())
+
+  @@index([insuranceInvoiceId, receivedAt])
+}
+
+model SupplierBill {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  supplierId String
+  supplier   Supplier @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+
+  billNumber String?
+  title      String?
+  notes      String?
+
+  billDate DateTime  @default(now())
+  dueAt    DateTime?
+
+  subtotal  Decimal @db.Decimal(12, 2)
+  taxAmount Decimal @default(0) @db.Decimal(12, 2)
+  total     Decimal @db.Decimal(12, 2)
+
+  status     SupplierBillStatus @default(UNPAID)
+  voidedAt   DateTime?
+  voidReason String?
+
+  allocations SupplierPaymentAllocation[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId, supplierId, billDate])
+  @@index([organizationId, status, dueAt])
+}
+
+model SupplierPayment {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  supplierId String
+  supplier   Supplier @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+
+  method    SupplierPaymentMethod @default(OTHER)
+  amount    Decimal               @db.Decimal(12, 2)
+  paidAt    DateTime              @default(now())
+  reference String?
+  notes     String?
+
+  allocations SupplierPaymentAllocation[]
+
+  createdAt DateTime @default(now())
+
+  @@index([organizationId, supplierId, paidAt])
+}
+
+model SupplierPaymentAllocation {
+  id String @id @default(cuid())
+
+  supplierPaymentId String
+  supplierPayment   SupplierPayment @relation(fields: [supplierPaymentId], references: [id], onDelete: Cascade)
+
+  supplierBillId String
+  supplierBill   SupplierBill @relation(fields: [supplierBillId], references: [id], onDelete: Cascade)
+
+  amount Decimal @db.Decimal(12, 2)
+
+  @@unique([supplierPaymentId, supplierBillId])
+  @@index([supplierBillId])
+}
+
+model Expense {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  category    ExpenseCategory @default(OTHER)
+  description String
+  amount      Decimal         @db.Decimal(12, 2)
+  spentAt     DateTime        @default(now())
+  reference   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId, category, spentAt])
+}
