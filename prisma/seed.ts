@@ -15,8 +15,8 @@ import {
   SupplierPaymentMethod,
   ExpenseCategory,
 } from "@prisma/client";
-import bcrypt from "bcryptjs";
 import { DEFAULT_DEMO_PASSWORD } from "../lib/demo-credentials";
+import { upsertCredentialUser } from "../lib/auth-users";
 
 const prisma = new PrismaClient();
 
@@ -359,53 +359,36 @@ async function main() {
 
   await clearOrgInventoryAndSales(org.id);
 
-  const demoPasswordHash = await bcrypt.hash(SEED_DEMO_PASSWORD, 12);
-  const admin = await prisma.user.upsert({
-    where: { email: "admin@pharmacy.local" },
-    update: { passwordHash: demoPasswordHash },
-    create: {
-      email: "admin@pharmacy.local",
-      passwordHash: demoPasswordHash,
-      name: "Mary Wanjiku",
-      role: UserRole.ADMIN,
-      organizationId: org.id,
-    },
+  const admin = await upsertCredentialUser(prisma, {
+    email: "admin@pharmacy.local",
+    password: SEED_DEMO_PASSWORD,
+    name: "Mary Wanjiku",
+    role: UserRole.ADMIN,
+    organizationId: org.id,
   });
 
-  const cashier = await prisma.user.upsert({
-    where: { email: "cashier@pharmacy.local" },
-    update: { passwordHash: demoPasswordHash },
-    create: {
-      email: "cashier@pharmacy.local",
-      passwordHash: demoPasswordHash,
-      name: "James Omondi",
-      role: UserRole.CASHIER,
-      organizationId: org.id,
-    },
+  const cashier = await upsertCredentialUser(prisma, {
+    email: "cashier@pharmacy.local",
+    password: SEED_DEMO_PASSWORD,
+    name: "James Omondi",
+    role: UserRole.CASHIER,
+    organizationId: org.id,
   });
 
-  const pharmTech = await prisma.user.upsert({
-    where: { email: "pharmtech@pharmacy.local" },
-    update: { passwordHash: demoPasswordHash },
-    create: {
-      email: "pharmtech@pharmacy.local",
-      passwordHash: demoPasswordHash,
-      name: "Grace Akinyi",
-      role: UserRole.PHARM_TECH,
-      organizationId: org.id,
-    },
+  const pharmTech = await upsertCredentialUser(prisma, {
+    email: "pharmtech@pharmacy.local",
+    password: SEED_DEMO_PASSWORD,
+    name: "Grace Akinyi",
+    role: UserRole.PHARM_TECH,
+    organizationId: org.id,
   });
 
-  const doctor = await prisma.user.upsert({
-    where: { email: "doctor@pharmacy.local" },
-    update: { passwordHash: demoPasswordHash, role: UserRole.DOCTOR, organizationId: org.id },
-    create: {
-      email: "doctor@pharmacy.local",
-      passwordHash: demoPasswordHash,
-      name: "Dr. Anne Ochieng",
-      role: UserRole.DOCTOR,
-      organizationId: org.id,
-    },
+  const doctor = await upsertCredentialUser(prisma, {
+    email: "doctor@pharmacy.local",
+    password: SEED_DEMO_PASSWORD,
+    name: "Dr. Anne Ochieng",
+    role: UserRole.DOCTOR,
+    organizationId: org.id,
   });
 
   await prisma.doctorProfile.upsert({

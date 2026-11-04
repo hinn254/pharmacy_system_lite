@@ -2,7 +2,28 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
-First, run the development server:
+Start PostgreSQL and configure the application:
+
+```bash
+docker compose up -d postgres
+```
+
+Create `.env.local` with at least:
+
+```bash
+DATABASE_URL="postgresql://pharmacy:pharmacy@localhost:5432/pharmacy"
+BETTER_AUTH_URL="http://localhost:3000"
+BETTER_AUTH_SECRET="replace-with-at-least-32-random-characters"
+```
+
+Generate a secret with `openssl rand -base64 32`. Then prepare and seed the database:
+
+```bash
+npm run db:migrate
+npm run db:seed
+```
+
+Run the development server:
 
 ```bash
 npm run dev

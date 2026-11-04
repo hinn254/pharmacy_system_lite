@@ -238,8 +238,10 @@ model OrganizationSettings {
 model User {
   id             String       @id @default(cuid())
   email          String       @unique
-  passwordHash   String
-  name           String?
+  emailVerified  Boolean      @default(false)
+  name           String
+  phoneNumber    String?
+  image          String?
   role           UserRole     @default(CASHIER)
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -255,6 +257,8 @@ model User {
   batchesDeleted    DrugBatch[]        @relation("DrugBatchDeletedBy")
   mpesaTransactions MpesaTransaction[]
   aiChatLogs        AiChatLog[]
+  sessions          Session[]
+  accounts          Account[]
 
   doctorProfile DoctorProfile?
 
@@ -266,6 +270,51 @@ model User {
   updatedAt DateTime @updatedAt
 
   @@index([organizationId])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Account {
+  id                    String    @id @default(cuid())
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@unique([providerId, accountId])
+  @@index([userId])
+}
+
+model Verification {
+  id         String    @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime? @default(now())
+  updatedAt  DateTime? @updatedAt
+
+  @@index([identifier])
 }
 
 model DoctorProfile {

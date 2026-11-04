@@ -9,6 +9,7 @@ export async function createCredentialUser(
     email: string;
     password: string;
     name: string;
+    phoneNumber?: string | null;
     role: UserRole;
     organizationId: string;
   },
@@ -18,6 +19,7 @@ export async function createCredentialUser(
     data: {
       email: input.email.toLowerCase().trim(),
       name: input.name,
+      phoneNumber: input.phoneNumber ?? null,
       role: input.role,
       organizationId: input.organizationId,
     },
@@ -39,6 +41,7 @@ export async function upsertCredentialUser(
     email: string;
     password: string;
     name: string;
+    phoneNumber?: string | null;
     role: UserRole;
     organizationId: string;
   },
@@ -48,6 +51,9 @@ export async function upsertCredentialUser(
     where: { email },
     update: {
       name: input.name,
+      ...(input.phoneNumber !== undefined
+        ? { phoneNumber: input.phoneNumber }
+        : {}),
       role: input.role,
       organizationId: input.organizationId,
       bannedAt: null,
@@ -56,6 +62,7 @@ export async function upsertCredentialUser(
     create: {
       email,
       name: input.name,
+      phoneNumber: input.phoneNumber ?? null,
       role: input.role,
       organizationId: input.organizationId,
     },

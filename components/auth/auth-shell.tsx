@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 import {
   Building2,
+  CheckCircle2,
   Package,
   ShieldCheck,
   ShoppingCart,
@@ -18,7 +19,6 @@ type Bullet = { icon: LucideIcon; title: string; description: string };
 const PANEL: Record<
   AuthShellVariant,
   {
-    eyebrow: string;
     title: string;
     subtitle: string;
     bullets: Bullet[];
@@ -26,10 +26,9 @@ const PANEL: Record<
   }
 > = {
   login: {
-    eyebrow: "Sign in",
-    title: "Welcome back",
+    title: "Your pharmacy, ready when you are.",
     subtitle:
-      "Pick up where you left off — ring up sales, check stock, and keep your dispensary running smoothly.",
+      "Return to sales, stock, dispensing, and the daily work that keeps your pharmacy moving.",
     bullets: [
       {
         icon: ShoppingCart,
@@ -47,31 +46,30 @@ const PANEL: Record<
         description: "Cashier, pharm tech, and admin roles with an audit trail you can stand behind.",
       },
     ],
-    footnote: "Session‑scoped to your pharmacy · Data stays isolated per organization",
+    footnote: "Your session opens only the pharmacy and tools assigned to your account.",
   },
   register: {
-    eyebrow: "Get started",
-    title: "Create your pharmacy",
+    title: "Open your pharmacy workspace.",
     subtitle:
-      "Spin up a dedicated workspace in minutes. You’ll be the admin — invite cashiers and techs when you’re ready.",
+      "Create the owner account now. Your workspace opens ready for stock, staff, sales, and day-to-day setup.",
     bullets: [
       {
         icon: Building2,
-        title: "Your own organization",
-        description: "Separate catalog, clients, and sales history — nothing shared with other pharmacies.",
+        title: "A workspace for your business",
+        description: "Your catalog, patients, sales, and settings stay separate from every other pharmacy.",
       },
       {
         icon: UserRoundCog,
-        title: "You start as admin",
-        description: "Manage users, settings, and integrations; scale the team without losing control.",
+        title: "You begin as the owner",
+        description: "Configure the business, manage access, and invite staff when you are ready.",
       },
       {
         icon: Sparkles,
-        title: "Ready for real operations",
-        description: "Tax defaults, receipt placeholders, and M‑Pesa sandbox — tune the rest in settings.",
+        title: "Start useful, refine as you go",
+        description: "Open the dashboard immediately, then add stock, receipt details, payments, and your team.",
       },
     ],
-    footnote: "One email per pharmacy workspace · Add more staff accounts anytime",
+    footnote: "Opening an existing team invitation? Use the link sent to your email instead.",
   },
 };
 
@@ -96,7 +94,7 @@ export function AuthShell({ variant, children, footer }: AuthShellProps) {
 
       <aside
         className={cn(
-          "relative flex flex-col border-b border-border/60 px-8 py-10 md:w-[44%] md:min-h-screen md:border-b-0 md:border-r md:py-12 lg:px-12",
+          "relative order-2 flex flex-col border-t border-border/60 px-6 py-8 md:order-1 md:min-h-screen md:w-[44%] md:border-r md:border-t-0 md:px-8 md:py-12 lg:px-12",
           "bg-card/30 backdrop-blur-md",
         )}
       >
@@ -116,7 +114,7 @@ export function AuthShell({ variant, children, footer }: AuthShellProps) {
         <div className="relative flex min-h-0 flex-1 flex-col">
           <Link
             href="/"
-            className="inline-flex w-fit items-center gap-2.5 rounded-xl text-lg font-semibold tracking-tight text-foreground transition-opacity hover:opacity-90"
+            className="hidden w-fit items-center gap-2.5 rounded-xl text-lg font-semibold tracking-tight text-foreground transition-opacity hover:opacity-90 md:inline-flex"
           >
             <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-sm font-bold text-primary-foreground shadow-md shadow-primary/25">
               Rx
@@ -129,11 +127,8 @@ export function AuthShell({ variant, children, footer }: AuthShellProps) {
             </span>
           </Link>
 
-          <div className="mt-8 md:mt-12">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-              {copy.eyebrow}
-            </p>
-            <h1 className="mt-3 max-w-md text-balance font-heading text-3xl font-semibold tracking-tight text-foreground md:text-4xl lg:text-[2.35rem] lg:leading-[1.15]">
+          <div className="mt-8 hidden md:block md:mt-12">
+            <h1 className="max-w-md text-balance font-heading text-3xl font-semibold tracking-[-0.025em] text-foreground md:text-4xl lg:text-[2.35rem] lg:leading-[1.15]">
               {copy.title}
             </h1>
             <p className="mt-4 max-w-md text-pretty text-base text-muted-foreground leading-relaxed">
@@ -141,7 +136,7 @@ export function AuthShell({ variant, children, footer }: AuthShellProps) {
             </p>
           </div>
 
-          <ul className="mt-10 flex flex-col gap-5 md:mt-12">
+          <ul className="mt-10 hidden flex-col gap-5 md:mt-12 md:flex">
             {copy.bullets.map((item) => (
               <li key={item.title} className="flex gap-4">
                 <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/12 text-primary shadow-sm ring-1 ring-primary/10">
@@ -157,15 +152,25 @@ export function AuthShell({ variant, children, footer }: AuthShellProps) {
             ))}
           </ul>
 
-          <p className="mt-10 max-w-md text-sm text-muted-foreground leading-relaxed md:mt-auto md:pt-10">
+          <p className="mt-6 flex max-w-md items-start gap-2 text-sm leading-relaxed text-muted-foreground md:mt-auto md:pt-10">
+            <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden />
             {copy.footnote}
           </p>
         </div>
       </aside>
 
-      <main className="relative flex flex-1 flex-col items-center justify-center p-6 md:p-10 lg:p-12">
+      <main className="relative order-1 flex flex-1 flex-col items-center justify-center p-5 pt-7 md:order-2 md:p-10 lg:p-12">
+        <Link
+          href="/"
+          className="mb-6 inline-flex items-center gap-2.5 self-start rounded-xl text-lg font-semibold tracking-tight text-foreground md:hidden"
+        >
+          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-xs font-bold text-primary-foreground shadow-md shadow-primary/20">
+            Rx
+          </span>
+          <span>Pharmacy OS</span>
+        </Link>
         <div className="w-full max-w-[420px] space-y-8">
-          <div className="rounded-2xl border border-border/80 bg-card/95 p-6 shadow-lg shadow-primary/5 backdrop-blur-md sm:p-8">
+          <div className="rounded-2xl bg-card p-6 shadow-[0_18px_55px_-30px_oklch(0.44_0.11_195_/_0.45)] ring-1 ring-border/80 sm:p-8">
             {children}
           </div>
           <div className="text-center text-sm text-muted-foreground">{footer}</div>

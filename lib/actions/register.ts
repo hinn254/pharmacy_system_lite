@@ -5,12 +5,21 @@ import { Prisma, UserRole } from "@prisma/client";
 import { z } from "zod";
 import { slugify } from "@/lib/slugify";
 import { createCredentialUser } from "@/lib/auth-users";
+import { normalizeKenyaMsisdn } from "@/lib/phone";
 
 const registerSchema = z.object({
   pharmacyName: z.string().min(2).max(128),
   email: z.string().email(),
   password: z.string().min(8).max(128),
   name: z.string().min(2).max(128),
+  phoneNumber: z
+    .string()
+    .trim()
+    .min(1, "Enter your phone number.")
+    .refine(
+      (value) => normalizeKenyaMsisdn(value) !== null,
+      "Enter a valid Kenyan mobile number, such as 0712 345 678.",
+    ),
 });
 
 export type RegisterInput = z.infer<typeof registerSchema>;
@@ -57,6 +66,14 @@ export async function registerOrganization(
 
   const data = parsed.data;
   const email = data.email.toLowerCase().trim();
+  const phoneNumber = normalizeKenyaMsisdn(data.phoneNumber);
+  if (!phoneNumber) {
+    return {
+      ok: false,
+      error: "Enter a valid Kenyan mobile number, such as 0712 345 678.",
+      code: "VALIDATION",
+    };
+  }
 
   const emailTaken = await prisma.user.findUnique({
     where: { email },
@@ -97,6 +114,7 @@ export async function registerOrganization(
         email,
         password: data.password,
         name: data.name.trim(),
+        phoneNumber,
         role: UserRole.ADMIN,
         organizationId: organization.id,
       });

@@ -12,12 +12,12 @@ export default async function LoginPage() {
       variant="login"
       footer={
         <>
-          New pharmacy?{" "}
+          Opening a new pharmacy?{" "}
           <Link
             href="/register"
             className="font-medium text-primary underline-offset-4 hover:underline"
           >
-            Create an account
+            Create the owner account
           </Link>
         </>
       }

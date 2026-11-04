@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 
 const COOKIE_NAMES = [
+  "better-auth.session_token",
+  "__Secure-better-auth.session_token",
+  "better-auth.session_data",
+  "__Secure-better-auth.session_data",
   // Auth.js / next-auth v5+ (primary)
   "authjs.session-token",
   "__Secure-authjs.session-token",

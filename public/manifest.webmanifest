@@ -1,9 +1,0 @@
-{
-  "name": "Pharmacy OS",
-  "short_name": "Pharmacy",
-  "description": "Pharmacy management — POS, inventory, clients",
-  "start_url": "/dashboard",
-  "display": "standalone",
-  "background_color": "#fafafa",
-  "theme_color": "#171717"
-}

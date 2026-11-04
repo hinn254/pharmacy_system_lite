@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Pharmacy OS",
-  description: "Pharmacy management — POS, inventory, clients",
-  manifest: "/manifest.webmanifest",
+  description:
+    "Run sales, dispensing, inventory, patients, insurance, finance, and pharmacy operations from one connected workspace.",
 };
 
 export default function RootLayout({

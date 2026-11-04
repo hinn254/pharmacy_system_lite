@@ -11,12 +11,12 @@ export default async function RegisterPage() {
       variant="register"
       footer={
         <>
-          Already have an account?{" "}
+          Already manage a pharmacy here?{" "}
           <Link
             href="/login"
             className="font-medium text-primary underline-offset-4 hover:underline"
           >
-            Sign in
+            Sign in to your account
           </Link>
         </>
       }

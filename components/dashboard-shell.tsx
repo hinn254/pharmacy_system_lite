@@ -2,8 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { signOut } from "next-auth/react";
+import { usePathname, useRouter } from "next/navigation";
+import { authClient } from "@/lib/auth-client";
 import type { UserRole } from "@prisma/client";
 import {
   Sidebar,
@@ -131,6 +131,7 @@ export function DashboardShell({
   };
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [navBadgeCounts, setNavBadgeCounts] =
     useState<NavBadgeCounts>(initialNavBadgeCounts);
 
@@ -260,7 +261,7 @@ export function DashboardShell({
           <Button
             variant="ghost"
             className="h-10 w-full justify-start gap-2.5 rounded-lg text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground"
-            onClick={() => signOut({ callbackUrl: "/login" })}
+            onClick={() => authClient.signOut({ fetchOptions: { onSuccess: () => router.push("/login") } })}
           >
             <LogOut className="size-4" />
             Sign out
@@ -300,7 +301,7 @@ export function DashboardShell({
                 <DropdownMenuItem
                   onSelect={(e) => {
                     e.preventDefault();
-                    signOut({ callbackUrl: "/login" });
+                    authClient.signOut({ fetchOptions: { onSuccess: () => router.push("/login") } });
                   }}
                   className="cursor-pointer"
                 >
