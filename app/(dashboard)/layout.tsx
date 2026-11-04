@@ -3,6 +3,7 @@ import { DashboardShell } from "@/components/dashboard-shell";
 import { redirectToLoginClearingSession } from "@/lib/auth-redirect";
 import { getNavBadgeCounts } from "@/lib/nav-badge-counts";
 import { prisma } from "@/lib/prisma";
+import { ensureSubscription } from "@/lib/billing/service";
 
 export const dynamic = "force-dynamic";
 
@@ -15,7 +16,7 @@ export default async function DashboardLayout({
   if (!session?.user) redirectToLoginClearingSession();
 
   const orgId = session.user.organizationId;
-  const [navBadgeCounts, org] = await Promise.all([
+  const [navBadgeCounts, org, subscription] = await Promise.all([
     getNavBadgeCounts(),
     prisma.organization.findUnique({
       where: { id: orgId },
@@ -26,6 +27,7 @@ export default async function DashboardLayout({
         },
       },
     }),
+    ensureSubscription(orgId),
   ]);
 
   return (
@@ -39,6 +41,7 @@ export default async function DashboardLayout({
         tagline: org?.settings?.businessTagline?.trim() || "Clinical operations",
         logoUrl: org?.settings?.logoUrl ?? null,
       }}
+      billing={{ status: subscription.status, accessEndsAt: subscription.periodEndAt ?? subscription.trialEndsAt }}
     >
       {children}
     </DashboardShell>

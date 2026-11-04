@@ -5,7 +5,7 @@ export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const hasSessionCookie = Boolean(getSessionCookie(request));
 
-  if (pathname.startsWith("/api/mpesa/callback")) return NextResponse.next();
+  if (pathname.startsWith("/api/mpesa/callback") || pathname.startsWith("/api/paystack/webhook") || pathname.startsWith("/api/cron")) return NextResponse.next();
 
   const isPublic =
     pathname === "/" ||

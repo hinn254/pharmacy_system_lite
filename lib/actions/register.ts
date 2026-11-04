@@ -6,6 +6,7 @@ import { z } from "zod";
 import { slugify } from "@/lib/slugify";
 import { createCredentialUser } from "@/lib/auth-users";
 import { normalizeKenyaMsisdn } from "@/lib/phone";
+import { addDays, TRIAL_DAYS } from "@/lib/billing/plans";
 
 const registerSchema = z.object({
   pharmacyName: z.string().min(2).max(128),
@@ -106,6 +107,11 @@ export async function registerOrganization(
               defaultLowStockDays: 90,
               mpesaEnvironment: "sandbox",
               insuranceNotes: null,
+            },
+          },
+          subscription: {
+            create: {
+              trialEndsAt: addDays(new Date(), TRIAL_DAYS),
             },
           },
         },

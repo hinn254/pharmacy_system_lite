@@ -148,6 +148,28 @@ enum ExpenseCategory {
   OTHER
 }
 
+enum SubscriptionInterval {
+  MONTHLY
+  ANNUAL
+}
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  GRACE
+  PAST_DUE
+  EXPIRED
+  CANCELLED
+}
+
+enum BillingPaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  ABANDONED
+  REFUNDED
+}
+
 model Organization {
   id        String   @id @default(cuid())
   name      String
@@ -173,6 +195,9 @@ model Organization {
   discountCodes    DiscountCode[]
   saleDiscounts    SaleDiscount[]
   drugCategories   DrugCategory[]
+  subscription     OrganizationSubscription?
+  billingPayments  BillingPayment[]
+  billingEvents    PaystackWebhookEvent[]
 
   insuranceInvoices InsuranceInvoice[]
   supplierBills     SupplierBill[]
@@ -184,6 +209,81 @@ model Organization {
   consultationEncounters       ConsultationEncounter[]
   consultationMedicationOrders ConsultationMedicationOrder[]
   consultationCheckouts        ConsultationCheckout[]
+}
+
+model OrganizationSubscription {
+  id               String                @id @default(cuid())
+  organizationId   String                @unique
+  organization     Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  status           SubscriptionStatus    @default(TRIALING)
+  interval         SubscriptionInterval?
+  amountMinor      Int?
+  currency         String                @default("KES")
+  trialStartedAt   DateTime              @default(now())
+  trialEndsAt      DateTime
+  periodStartAt    DateTime?
+  periodEndAt      DateTime?
+  graceEndsAt      DateTime?
+  cancelAtEnd      Boolean               @default(false)
+  cancelledAt      DateTime?
+  customerCode     String?
+  subscriptionCode String?               @unique
+  emailToken       String?
+  planCode         String?
+  lastPaymentAt    DateTime?
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  payments         BillingPayment[]
+
+  @@index([status, trialEndsAt])
+  @@index([customerCode])
+}
+
+model BillingPlan {
+  id           String               @id @default(cuid())
+  interval     SubscriptionInterval @unique
+  amountMinor  Int
+  currency     String               @default("KES")
+  paystackCode String               @unique
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+}
+
+model BillingPayment {
+  id             String                    @id @default(cuid())
+  organizationId String
+  organization   Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  subscriptionId String?
+  subscription   OrganizationSubscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  reference      String                    @unique
+  interval       SubscriptionInterval
+  status         BillingPaymentStatus      @default(PENDING)
+  amountMinor    Int
+  currency       String                    @default("KES")
+  channel        String?
+  transactionId  String?
+  paidAt         DateTime?
+  failureReason  String?
+  metadata       Json?
+  createdAt      DateTime                  @default(now())
+  updatedAt      DateTime                  @updatedAt
+
+  @@index([organizationId, createdAt])
+  @@index([subscriptionId, status])
+}
+
+model PaystackWebhookEvent {
+  id             String        @id @default(cuid())
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  dedupeKey      String        @unique
+  eventType      String
+  payload        Json
+  processedAt    DateTime?
+  error          String?
+  createdAt      DateTime      @default(now())
+
+  @@index([eventType, createdAt])
 }
 
 model DrugCategory {
