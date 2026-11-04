@@ -3,9 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import bcrypt from "bcryptjs";
 import { UserRole } from "@prisma/client";
 import { writeAuditLog } from "@/lib/audit";
+import { createCredentialUser, setCredentialPassword } from "@/lib/auth-users";
 import { z } from "zod";
 
 const userSchema = z.object({
@@ -43,34 +43,22 @@ export async function upsertUser(input: unknown, id?: string) {
   const orgId = session.user.organizationId;
   const data = userSchema.parse(input);
 
-  const payload: {
-    email: string;
-    name: string | null;
-    role: UserRole;
-    passwordHash?: string;
-  } = {
+  const payload = {
     email: data.email.toLowerCase(),
-    name: data.name ?? null,
+    name: data.name?.trim() || data.email.split("@")[0] || "Pharmacy user",
     role: data.role,
   };
-
-  if (data.password) {
-    payload.passwordHash = await bcrypt.hash(data.password, 12);
-  }
 
   if (id) {
     const existing = await prisma.user.findFirst({
       where: { id, organizationId: orgId },
     });
     if (!existing) throw new Error("User not found");
-    const { passwordHash, ...rest } = payload;
     const updated = await prisma.user.update({
       where: { id },
-      data: {
-        ...rest,
-        ...(passwordHash ? { passwordHash } : {}),
-      },
+      data: payload,
     });
+    if (data.password) await setCredentialPassword(prisma, id, data.password);
     await writeAuditLog({
       organizationId: orgId,
       userId: session.user.id,
@@ -83,15 +71,14 @@ export async function upsertUser(input: unknown, id?: string) {
   }
 
   if (!data.password) throw new Error("Password required for new user");
-  const created = await prisma.user.create({
-    data: {
-      email: payload.email,
-      name: payload.name,
-      role: payload.role,
-      passwordHash: payload.passwordHash!,
+  const password = data.password;
+  const created = await prisma.$transaction((tx) =>
+    createCredentialUser(tx, {
+      ...payload,
+      password,
       organizationId: orgId,
-    },
-  });
+    }),
+  );
   await writeAuditLog({
     organizationId: orgId,
     userId: session.user.id,

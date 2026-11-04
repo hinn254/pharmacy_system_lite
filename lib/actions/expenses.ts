@@ -1,6 +1,6 @@
 "use server";
 
-import type { Session } from "next-auth";
+import type { AuthSession as Session } from "@/auth";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";

@@ -7,7 +7,7 @@ import { writeAuditLog } from "@/lib/audit";
 import { z } from "zod";
 import OpenAI from "openai";
 import { PHARMACY_AI_MODEL } from "@/lib/ai/tools";
-import type { Session } from "next-auth";
+import type { AuthSession as Session } from "@/auth";
 
 function assertCanManageCategories(session: Session | null) {
   if (!session?.user?.organizationId) throw new Error("Unauthorized");

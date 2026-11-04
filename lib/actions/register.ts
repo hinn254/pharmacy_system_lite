@@ -1,21 +1,16 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import bcrypt from "bcryptjs";
 import { Prisma, UserRole } from "@prisma/client";
 import { z } from "zod";
 import { slugify } from "@/lib/slugify";
+import { createCredentialUser } from "@/lib/auth-users";
 
 const registerSchema = z.object({
   pharmacyName: z.string().min(2).max(128),
-  slug: z
-    .string()
-    .max(80)
-    .optional()
-    .transform((s) => (s?.trim() ? s : undefined)),
   email: z.string().email(),
   password: z.string().min(8).max(128),
-  name: z.string().max(128).optional().nullable(),
+  name: z.string().min(2).max(128),
 });
 
 export type RegisterInput = z.infer<typeof registerSchema>;
@@ -75,15 +70,14 @@ export async function registerOrganization(
     };
   }
 
-  const slugBase = data.slug ? slugify(data.slug) : slugify(data.pharmacyName);
+  const slugBase = slugify(data.pharmacyName);
 
   try {
     await prisma.$transaction(async (tx) => {
       const slug = await allocateUniqueSlug(tx, slugBase);
-      const passwordHash = await bcrypt.hash(data.password, 12);
       const receiptHeader = data.pharmacyName.trim();
 
-      await tx.organization.create({
+      const organization = await tx.organization.create({
         data: {
           name: data.pharmacyName.trim(),
           slug,
@@ -97,15 +91,14 @@ export async function registerOrganization(
               insuranceNotes: null,
             },
           },
-          users: {
-            create: {
-              email,
-              passwordHash,
-              name: data.name?.trim() || null,
-              role: UserRole.ADMIN,
-            },
-          },
         },
+      });
+      await createCredentialUser(tx, {
+        email,
+        password: data.password,
+        name: data.name.trim(),
+        role: UserRole.ADMIN,
+        organizationId: organization.id,
       });
     });
   } catch (e) {

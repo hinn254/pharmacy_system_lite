@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { InsuranceInvoiceStatus, PaymentMethod, PaymentStatus, Prisma } from "@prisma/client";
-import type { Session } from "next-auth";
+import type { AuthSession as Session } from "@/auth";
 
 function requireAdminOrg(session: Session | null) {
   if (!session?.user?.organizationId || session.user.role !== "ADMIN") {
