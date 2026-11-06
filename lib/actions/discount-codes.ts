@@ -11,20 +11,24 @@ const upsertDiscountCodeSchema = z
   .object({
     code: z
       .string()
-      .min(2)
-      .max(32)
+      .min(2, "Enter a discount code with at least 2 characters.")
+      .max(32, "Keep the discount code to 32 characters or fewer.")
       .transform((s) => s.trim().toUpperCase())
       .refine((s) => /^[A-Z0-9_-]+$/.test(s), {
         message: "Code must use letters/numbers/_/- only.",
       }),
-    name: z.string().min(2).max(120).transform((s) => s.trim()),
+    name: z
+      .string()
+      .trim()
+      .min(2, "Enter a discount name with at least 2 characters.")
+      .max(120, "Keep the discount name to 120 characters or fewer."),
     active: z.boolean().default(true),
     stackable: z.boolean().default(true),
     priority: z.coerce.number().int().min(-1000).max(1000).default(0),
 
     valueType: z.nativeEnum(DiscountValueType),
-    valuePercent: z.coerce.number().min(0).max(100).optional().nullable(),
-    valueAmount: z.coerce.number().min(0).optional().nullable(),
+    valuePercent: z.coerce.number().gt(0, "Enter a discount percentage greater than 0.").max(100, "Discount percentage cannot be more than 100%.").optional().nullable(),
+    valueAmount: z.coerce.number().gt(0, "Enter a fixed discount amount greater than 0.").optional().nullable(),
 
     scopeType: z.nativeEnum(DiscountScopeType).default(DiscountScopeType.ALL_DRUGS),
     drugIds: z.array(z.string().min(1)).optional().default([]),
@@ -74,7 +78,7 @@ export async function listDiscountCodes() {
   if (!session?.user?.organizationId || session.user.role !== "ADMIN") return [];
   const orgId = session.user.organizationId;
 
-  return prisma.discountCode.findMany({
+  const rows = await prisma.discountCode.findMany({
     where: { organizationId: orgId },
     orderBy: [{ active: "desc" }, { priority: "desc" }, { createdAt: "desc" }],
     include: {
@@ -82,17 +86,32 @@ export async function listDiscountCodes() {
       patients: { include: { patient: { select: { id: true, fullName: true, phone: true, email: true } } } },
     },
   });
+
+  // Prisma Decimal instances cannot cross a Server Action boundary. Convert
+  // them to plain numbers before returning the rows to the client component.
+  return rows.map((row) => ({
+    ...row,
+    valuePercent: row.valuePercent?.toNumber() ?? null,
+    valueAmount: row.valueAmount?.toNumber() ?? null,
+  }));
 }
 
 export async function upsertDiscountCode(input: unknown, id?: string) {
   const session = await auth();
   if (!session?.user?.organizationId || session.user.role !== "ADMIN") {
-    throw new Error("Unauthorized");
+    return { ok: false as const, error: "You do not have permission to manage discount codes." };
   }
   const orgId = session.user.organizationId;
   const userId = session.user.id;
 
-  const data = upsertDiscountCodeSchema.parse(input);
+  const parsed = upsertDiscountCodeSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      ok: false as const,
+      error: parsed.error.issues[0]?.message ?? "Check the discount details and try again.",
+    };
+  }
+  const data = parsed.data;
 
   const payload = {
     organizationId: orgId,
@@ -151,7 +170,7 @@ export async function upsertDiscountCode(input: unknown, id?: string) {
       metadata: { code: data.code },
     });
     revalidatePath("/admin/settings");
-    return updated;
+    return { ok: true as const, id: updated.id };
   }
 
   const created = await prisma.discountCode.create({
@@ -178,7 +197,7 @@ export async function upsertDiscountCode(input: unknown, id?: string) {
     metadata: { code: data.code },
   });
   revalidatePath("/admin/settings");
-  return created;
+  return { ok: true as const, id: created.id };
 }
 
 export async function deleteDiscountCode(id: string) {

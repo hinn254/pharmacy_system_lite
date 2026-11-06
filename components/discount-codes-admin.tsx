@@ -394,6 +394,7 @@ function DiscountCodeDialogBody({
   const [patientQuery, setPatientQuery] = useState("");
   const [patientHits, setPatientHits] = useState<PatientHit[]>([]);
   const [patientLoading, setPatientLoading] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   useEffect(() => {
     const t = drugQuery.trim();
@@ -468,9 +469,31 @@ function DiscountCodeDialogBody({
   }
 
   function onSave() {
+    setFormError(null);
+    if (code.trim().length < 2) {
+      setFormError("Enter a discount code with at least 2 characters.");
+      return;
+    }
+    if (name.trim().length < 2) {
+      setFormError("Enter a discount name with at least 2 characters.");
+      return;
+    }
+    const numericValue = Number(valueType === "PERCENT" ? valuePercent : valueAmount);
+    if (!Number.isFinite(numericValue) || numericValue <= 0) {
+      setFormError(valueType === "PERCENT" ? "Enter a discount percentage greater than 0." : "Enter a fixed discount amount greater than 0.");
+      return;
+    }
+    if (valueType === "PERCENT" && numericValue > 100) {
+      setFormError("Discount percentage cannot be more than 100%.");
+      return;
+    }
+    if (scopeType === "DRUGS" && drugIds.length === 0) {
+      setFormError("Select at least one drug, or change the scope to All drugs.");
+      return;
+    }
     startTransition(async () => {
       try {
-        await upsertDiscountCode(
+        const result = await upsertDiscountCode(
           {
             code,
             name,
@@ -491,10 +514,15 @@ function DiscountCodeDialogBody({
           },
           initial?.id,
         );
+        if (!result.ok) {
+          setFormError(result.error);
+          return;
+        }
         toast.success(initial ? "Discount updated" : "Discount created");
         onSaved();
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Failed");
+        const message = e instanceof Error ? e.message : "Could not save the discount. Please try again.";
+        setFormError(message);
       }
     });
   }
@@ -509,10 +537,16 @@ function DiscountCodeDialogBody({
       </DialogHeader>
 
       <div className="grid gap-5">
+        {formError ? (
+          <div role="alert" className="rounded-xl bg-destructive/8 px-3.5 py-3 text-sm leading-relaxed text-destructive ring-1 ring-destructive/20">
+            {formError}
+          </div>
+        ) : null}
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-2">
-            <Label>Code</Label>
+            <Label htmlFor="discount-code">Code</Label>
             <Input
+              id="discount-code"
               value={code}
               onChange={(e) => setCode(e.target.value)}
               placeholder="VALENTINES10"
@@ -521,8 +555,9 @@ function DiscountCodeDialogBody({
             />
           </div>
           <div className="space-y-2">
-            <Label>Name</Label>
+            <Label htmlFor="discount-name">Name</Label>
             <Input
+              id="discount-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Valentines promo"
