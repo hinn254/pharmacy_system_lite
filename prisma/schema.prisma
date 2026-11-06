@@ -314,6 +314,7 @@ model OrganizationSettings {
   website         String?
   phoneNumber     String?
   email           String?
+  city            String?
   logoUrl         String?
 
   /**

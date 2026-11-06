@@ -16,6 +16,7 @@ export function RegisterForm() {
   const callbackUrl = searchParams.get("callbackUrl") ?? "/dashboard";
 
   const [pharmacyName, setPharmacyName] = useState("");
+  const [city, setCity] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
@@ -37,6 +38,7 @@ export function RegisterForm() {
     try {
       const res = await registerOrganization({
         pharmacyName,
+        city,
         email,
         phoneNumber,
         password,
@@ -103,6 +105,23 @@ export function RegisterForm() {
             minLength={2}
             maxLength={128}
           />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="city">Town or city</Label>
+          <Input
+            id="city"
+            name="city"
+            autoComplete="address-level2"
+            value={city}
+            onChange={(e) => setCity(e.target.value)}
+            placeholder="e.g. Kisumu"
+            required
+            minLength={2}
+            maxLength={80}
+          />
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            Helps us tailor support and understand where Pharmacy OS is growing.
+          </p>
         </div>
       </div>
 

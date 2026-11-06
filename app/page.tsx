@@ -3,9 +3,11 @@ import Link from "next/link";
 import {
   ArrowRight, BadgeCheck, BarChart3, Boxes, BrainCircuit, Check,
   CircleCheck, FileCheck2, Globe2, Pill, ReceiptText, ShieldCheck,
-  ShoppingCart, Stethoscope, Users, WalletCards,
+  ShoppingCart, Stethoscope, Users, WalletCards, Activity, Building2, UserRoundCheck,
 } from "lucide-react";
 import { auth } from "@/auth";
+import { prisma } from "@/lib/prisma";
+import { LandingActivityToast } from "@/components/landing-activity-toast";
 
 const operatingFlow = [
   { number: "01", title: "Sell with the right context", body: "Find the medicine, patient, prescription, and price without bouncing between systems.", icon: ShoppingCart },
@@ -23,6 +25,13 @@ const roleOutcomes = [
 
 export default async function Home() {
   const session = await auth();
+  const now = new Date();
+  const activeSince = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  const [businessesRegistered, teamMembers, activeUsers] = await Promise.all([
+    prisma.organization.count({ where: { slug: { not: "main-pharmacy" } } }),
+    prisma.user.count({ where: { deletedAt: null, organization: { slug: { not: "main-pharmacy" } } } }),
+    prisma.session.groupBy({ by: ["userId"], where: { updatedAt: { gte: activeSince }, expiresAt: { gt: now }, user: { organization: { slug: { not: "main-pharmacy" } } } } }),
+  ]);
   const primaryHref = session ? "/dashboard" : "/register";
   const primaryLabel = session ? "Open your dashboard" : "Create your pharmacy";
 
@@ -65,6 +74,29 @@ export default async function Home() {
             </div>
             <div className="absolute -bottom-7 right-4 hidden w-64 rounded-xl bg-white p-4 shadow-[0_18px_50px_rgba(22,55,48,0.18)] ring-1 ring-[#183d35]/10 sm:block"><div className="flex items-start gap-3"><span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-[#dff4ef] text-[#006b5d]"><BrainCircuit className="size-4" aria-hidden="true" /></span><div><p className="text-sm font-semibold">Ask your pharmacy</p><p className="mt-1 text-xs leading-5 text-[#5c716c]">“Which fast-moving items should I reorder this week?”</p></div></div></div>
           </div>
+        </div>
+      </section>
+
+      <section className="border-b border-[#143e36]/10 bg-[#edf5f2]" aria-labelledby="platform-momentum">
+        <div className="mx-auto grid max-w-7xl lg:grid-cols-[1.15fr_1.85fr]">
+          <div className="flex flex-col justify-center border-[#143e36]/10 px-5 py-10 sm:px-8 lg:border-r lg:px-10 lg:py-12">
+            <h2 id="platform-momentum" className="max-w-md text-2xl font-semibold leading-tight tracking-[-0.025em] sm:text-3xl">Built in Kenya. Growing one pharmacy at a time.</h2>
+            <p className="mt-3 max-w-md text-sm leading-6 text-[#526a64]">Live platform activity—not estimates—updated as owners and their teams get to work.</p>
+          </div>
+          <dl className="grid grid-cols-2 lg:grid-cols-4">
+            {[
+              [Building2, businessesRegistered.toLocaleString("en-KE"), businessesRegistered === 1 ? "pharmacy workspace" : "pharmacy workspaces"],
+              [Users, teamMembers.toLocaleString("en-KE"), teamMembers === 1 ? "team member equipped" : "team members equipped"],
+              [UserRoundCheck, activeUsers.length.toLocaleString("en-KE"), "active in the last 24 hours"],
+              [Activity, "30 days", "to experience the full platform"],
+            ].map(([Icon, value, label]) => { const MetricIcon = Icon as typeof Activity; return (
+              <div key={label as string} className="border-l border-t border-[#143e36]/10 px-5 py-7 first:border-l-0 sm:px-6 lg:border-t-0 lg:py-10">
+                <MetricIcon className="size-5 text-[#008c78]" aria-hidden="true" />
+                <dd className="mt-5 text-3xl font-semibold tabular-nums tracking-[-0.03em] text-[#102521]">{value as string}</dd>
+                <dt className="mt-2 max-w-[11rem] text-xs font-medium leading-5 text-[#5d756f]">{label as string}</dt>
+              </div>
+            ); })}
+          </dl>
         </div>
       </section>
 
@@ -135,6 +167,7 @@ export default async function Home() {
       <footer className="bg-[#0a241f] text-white/60">
         <div className="mx-auto flex max-w-7xl flex-col gap-5 px-5 py-8 text-sm sm:flex-row sm:items-center sm:justify-between sm:px-8 lg:px-10"><div className="flex items-center gap-2 font-semibold text-white"><Pill className="size-4" aria-hidden="true" />Pharmacy OS</div><p>Built for the work between the shelf, the patient, and the business.</p><div className="flex gap-5"><Link href="/login" className="hover:text-white">Sign in</Link><Link href="/register" className="hover:text-white">Create pharmacy</Link></div></div>
       </footer>
+      <LandingActivityToast />
     </main>
   );
 }

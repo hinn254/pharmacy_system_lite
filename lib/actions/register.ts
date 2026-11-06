@@ -10,6 +10,7 @@ import { addDays, TRIAL_DAYS } from "@/lib/billing/plans";
 
 const registerSchema = z.object({
   pharmacyName: z.string().min(2).max(128),
+  city: z.string().trim().min(2, "Enter your town or city.").max(80),
   email: z.string().email(),
   password: z.string().min(8).max(128),
   name: z.string().min(2).max(128),
@@ -103,6 +104,7 @@ export async function registerOrganization(
             create: {
               taxRatePercent: new Prisma.Decimal(16),
               receiptHeader,
+              city: data.city.trim(),
               receiptFooter: "Thank you for your business",
               defaultLowStockDays: 90,
               mpesaEnvironment: "sandbox",
