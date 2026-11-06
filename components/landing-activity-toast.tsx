@@ -5,6 +5,9 @@ import { Building2, X } from "lucide-react";
 import activityLocations from "@/data/landing-activity.json";
 
 const cities = activityLocations.map(({ city }) => city);
+const INITIAL_DELAY = { minimum: 90_000, maximum: 180_000 };
+const REPEAT_DELAY = { minimum: 8 * 60_000, maximum: 15 * 60_000 };
+const VISIBLE_DURATION = 8_000;
 
 function randomDelay(minimum: number, maximum: number) {
   return Math.floor(Math.random() * (maximum - minimum + 1)) + minimum;
@@ -17,16 +20,29 @@ export function LandingActivityToast() {
   useEffect(() => {
     if (!cities.length || dismissed) return;
     let previous = -1;
-    let timer: number;
+    let showTimer: number;
+    let hideTimer: number;
+
+    const scheduleNext = (minimum: number, maximum: number) => {
+      showTimer = window.setTimeout(showNext, randomDelay(minimum, maximum));
+    };
+
     const showNext = () => {
       let next = Math.floor(Math.random() * cities.length);
       if (cities.length > 1 && next === previous) next = (next + 1) % cities.length;
       previous = next;
       setIndex(next);
-      timer = window.setTimeout(showNext, randomDelay(14_000, 24_000));
+      hideTimer = window.setTimeout(() => {
+        setIndex(-1);
+        scheduleNext(REPEAT_DELAY.minimum, REPEAT_DELAY.maximum);
+      }, VISIBLE_DURATION);
     };
-    timer = window.setTimeout(showNext, randomDelay(3_500, 6_500));
-    return () => window.clearTimeout(timer);
+
+    scheduleNext(INITIAL_DELAY.minimum, INITIAL_DELAY.maximum);
+    return () => {
+      window.clearTimeout(showTimer);
+      window.clearTimeout(hideTimer);
+    };
   }, [dismissed]);
 
   if (index < 0 || !cities[index]) return null;
@@ -41,8 +57,8 @@ export function LandingActivityToast() {
           <Building2 className="size-5" aria-hidden="true" />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold leading-5">A pharmacy in {cities[index]} recently joined Pharmacy OS</p>
-          <p className="mt-1 text-xs leading-5 text-[#b9d5ce]">Another team is bringing stock, sales and patient care into one workspace.</p>
+          <p className="text-sm font-semibold leading-5">More pharmacy teams are discovering Pharmacy OS</p>
+          <p className="mt-1 text-xs leading-5 text-[#b9d5ce]">Built for growing businesses across Kenya—from {cities[index]} to wherever care happens.</p>
         </div>
         <button type="button" onClick={() => { setIndex(-1); setDismissed(true); }} className="-mr-1 -mt-1 flex size-8 shrink-0 items-center justify-center rounded-lg text-white/60 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#72ddc9]" aria-label="Dismiss activity notification">
           <X className="size-4" aria-hidden="true" />
