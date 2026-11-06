@@ -8,6 +8,7 @@ import {
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { LandingActivityToast } from "@/components/landing-activity-toast";
+import { StartDemoButton } from "@/components/start-demo-button";
 
 // Keep the platform-momentum section ready to re-enable once we want it public.
 const SHOW_PLATFORM_MOMENTUM = false;
@@ -35,9 +36,9 @@ export default async function Home() {
     const now = new Date();
     const activeSince = new Date(now.getTime() - 24 * 60 * 60 * 1000);
     [businessesRegistered, teamMembers, activeUsers] = await Promise.all([
-      prisma.organization.count({ where: { slug: { not: "main-pharmacy" } } }),
-      prisma.user.count({ where: { deletedAt: null, organization: { slug: { not: "main-pharmacy" } } } }),
-      prisma.session.groupBy({ by: ["userId"], where: { updatedAt: { gte: activeSince }, expiresAt: { gt: now }, user: { organization: { slug: { not: "main-pharmacy" } } } } }),
+      prisma.organization.count({ where: { isDemo: false, slug: { not: "main-pharmacy" } } }),
+      prisma.user.count({ where: { deletedAt: null, organization: { isDemo: false, slug: { not: "main-pharmacy" } } } }),
+      prisma.session.groupBy({ by: ["userId"], where: { updatedAt: { gte: activeSince }, expiresAt: { gt: now }, user: { organization: { isDemo: false, slug: { not: "main-pharmacy" } } } } }),
     ]);
   }
   const primaryHref = session ? "/dashboard" : "/register";
@@ -67,8 +68,9 @@ export default async function Home() {
             <p className="mt-7 max-w-xl text-pretty text-lg leading-8 text-[#49635d] sm:text-xl">Pharmacy OS connects selling, dispensing, stock, patients, insurance, finance, and the decisions that follow—so your team works from one operational truth.</p>
             <div className="mt-9 flex flex-col gap-3 sm:flex-row">
               <Link href={primaryHref} className="inline-flex h-13 items-center justify-center gap-2 rounded-lg bg-[#006b5d] px-6 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(0,107,93,0.18)] transition-all hover:-translate-y-0.5 hover:bg-[#00594e]">{primaryLabel}<ArrowRight className="size-4" aria-hidden="true" /></Link>
-              {!session ? <Link href="/login" className="inline-flex h-13 items-center justify-center rounded-lg bg-white px-6 text-sm font-semibold text-[#173a33] ring-1 ring-[#173a33]/15 transition-colors hover:bg-[#eaf3f0]">Sign in to your pharmacy</Link> : null}
+              {!session ? <StartDemoButton /> : null}
             </div>
+            {!session ? <p className="mt-3 text-sm text-[#617871]">No signup needed. Explore a sample pharmacy for four hours.</p> : null}
             <div className="mt-8 flex flex-wrap gap-x-6 gap-y-3 text-sm text-[#49635d]">
               {["Owner-led setup", "Role-based staff access", "Built around Kenyan workflows"].map((item) => <span key={item} className="flex items-center gap-2"><CircleCheck className="size-4 text-[#008c78]" aria-hidden="true" />{item}</span>)}
             </div>

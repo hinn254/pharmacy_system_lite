@@ -121,6 +121,7 @@ export function DashboardShell({
   navBadgeCounts: initialNavBadgeCounts = {},
   orgBranding,
   billing,
+  demo,
 }: {
   children: React.ReactNode;
   role: UserRole;
@@ -133,15 +134,12 @@ export function DashboardShell({
     logoUrl: string | null;
   };
   billing?: { status: "TRIALING" | "ACTIVE" | "GRACE" | "PAST_DUE" | "EXPIRED" | "CANCELLED"; accessEndsAt: Date };
+  demo?: { expiresAt: Date };
 }) {
   const pathname = usePathname();
   const router = useRouter();
   const [navBadgeCounts, setNavBadgeCounts] =
     useState<NavBadgeCounts>(initialNavBadgeCounts);
-
-  useEffect(() => {
-    setNavBadgeCounts(initialNavBadgeCounts);
-  }, [initialNavBadgeCounts]);
 
   useEffect(() => {
     let cancelled = false;
@@ -318,7 +316,8 @@ export function DashboardShell({
         </header>
         <div className="flex flex-1 flex-col bg-linear-to-b from-muted/30 to-background px-4 py-6 md:px-8 md:py-8">
           <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6">
-            {billing && billing.status !== "ACTIVE" && <div className={`flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3 text-sm ${billing.status === "EXPIRED" || billing.status === "CANCELLED" ? "border-red-200 bg-red-50 text-red-950" : billing.status === "GRACE" || billing.status === "PAST_DUE" ? "border-amber-200 bg-amber-50 text-amber-950" : "border-emerald-200 bg-emerald-50 text-emerald-950"}`}><div><p className="font-semibold">{billing.status === "TRIALING" ? "Your 30-day trial is active" : billing.status === "GRACE" || billing.status === "PAST_DUE" ? "Payment is due — you’re in the grace period" : "Your subscription needs attention"}</p><p className="text-xs opacity-75">{billing.status === "TRIALING" ? `Trial ends ${new Date(billing.accessEndsAt).toLocaleDateString("en-KE")}. Subscribe any time to keep everything running.` : "Update billing to keep your team’s access uninterrupted."}</p></div>{role === "ADMIN" && <Button asChild size="sm"><Link href="/billing"><CreditCard /> Manage billing</Link></Button>}</div>}
+            {demo ? <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-[#0e2e28] px-4 py-3 text-sm text-white shadow-[0_10px_26px_rgba(14,46,40,0.16)]"><div><p className="font-semibold">You’re exploring a live sample pharmacy</p><p className="text-xs leading-5 text-[#b9d8d1]">Try the workflows freely. Changes are private and temporary; this workspace closes at {new Date(demo.expiresAt).toLocaleTimeString("en-KE", { hour: "numeric", minute: "2-digit" })}.</p></div><Button asChild size="sm" className="bg-[#72ddc9] text-[#0e2e28] hover:bg-white"><Link href="/api/auth/clear?redirectTo=/register">Start your pharmacy</Link></Button></div> : null}
+            {!demo && billing && billing.status !== "ACTIVE" && <div className={`flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3 text-sm ${billing.status === "EXPIRED" || billing.status === "CANCELLED" ? "border-red-200 bg-red-50 text-red-950" : billing.status === "GRACE" || billing.status === "PAST_DUE" ? "border-amber-200 bg-amber-50 text-amber-950" : "border-emerald-200 bg-emerald-50 text-emerald-950"}`}><div><p className="font-semibold">{billing.status === "TRIALING" ? "Your 30-day trial is active" : billing.status === "GRACE" || billing.status === "PAST_DUE" ? "Payment is due — you’re in the grace period" : "Your subscription needs attention"}</p><p className="text-xs opacity-75">{billing.status === "TRIALING" ? `Trial ends ${new Date(billing.accessEndsAt).toLocaleDateString("en-KE")}. Subscribe any time to keep everything running.` : "Update billing to keep your team’s access uninterrupted."}</p></div>{role === "ADMIN" && <Button asChild size="sm"><Link href="/billing"><CreditCard /> Manage billing</Link></Button>}</div>}
             {children}
           </div>
         </div>

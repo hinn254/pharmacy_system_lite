@@ -15,11 +15,13 @@ export const dynamic = "force-dynamic";
 export default async function BillingPage({ searchParams }: { searchParams: Promise<{ payment?: string }> }) {
   const session = await auth();
   if (!session?.user) redirect("/login?callbackUrl=/billing");
-  const [subscription, payments, query] = await Promise.all([
+  const [subscription, payments, query, organization] = await Promise.all([
     ensureSubscription(session.user.organizationId),
     prisma.billingPayment.findMany({ where: { organizationId: session.user.organizationId }, orderBy: { createdAt: "desc" }, take: 8 }),
     searchParams,
+    prisma.organization.findUnique({ where: { id: session.user.organizationId }, select: { isDemo: true } }),
   ]);
+  const isDemo = organization?.isDemo === true;
   const renewalDate = subscription.periodEndAt ?? subscription.trialEndsAt;
   return <main className="min-h-screen bg-linear-to-b from-emerald-50/70 to-background px-4 py-8 md:px-8">
     <div className="mx-auto max-w-6xl space-y-8">
@@ -29,13 +31,14 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
       </div>
       {query.payment === "success" && <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-medium text-emerald-900">Payment confirmed. Your access is active.</div>}
       {query.payment === "failed" && <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-900">We could not confirm that payment. No charge has been applied to your account.</div>}
+      {isDemo && <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-[#0e2e28] p-4 text-sm text-white"><div><p className="font-semibold">Pricing is here to explore; checkout is disabled in the demo.</p><p className="mt-1 text-xs text-[#b9d8d1]">Create your own pharmacy workspace when you are ready to start the 30-day trial.</p></div><Button asChild className="bg-[#72ddc9] text-[#0e2e28] hover:bg-white"><Link href="/api/auth/clear?redirectTo=/register">Start your pharmacy</Link></Button></div>}
       <div className="grid gap-5 lg:grid-cols-2">
         {(["ANNUAL", "MONTHLY"] as const).map((interval) => { const plan = BILLING_PLANS[interval]; const annual = interval === "ANNUAL"; return <Card key={interval} className={annual ? "relative border-emerald-300 shadow-lg" : ""}>
           {annual && <Badge className="absolute right-4 top-4 gap-1"><Sparkles className="size-3" /> Best value</Badge>}
           <CardHeader><CardTitle>{plan.label}</CardTitle><CardDescription>{annual ? "Two months free compared with monthly billing." : "Flexible access, renewed one month at a time."}</CardDescription></CardHeader>
           <CardContent className="space-y-5"><div><span className="text-4xl font-bold">{formatKes(plan.amountMinor)}</span><span className="text-muted-foreground"> / {annual ? "year" : "month"}</span></div>
             <ul className="space-y-2 text-sm">{["Unlimited staff accounts", "POS, stock and expiry intelligence", "Insurance and eTIMS workflows", "Client-facing website and AI assistance"].map((item) => <li key={item} className="flex gap-2"><Check className="size-4 text-emerald-600" />{item}</li>)}</ul>
-            {session.user.role === "ADMIN" ? <div className="grid gap-2 sm:grid-cols-2"><BillingCheckoutButton interval={interval} method="CARD"><CreditCard /> Card · auto-renew</BillingCheckoutButton><BillingCheckoutButton interval={interval} method="MPESA" variant="outline"><Smartphone /> M-Pesa · pay now</BillingCheckoutButton></div> : <p className="rounded-lg bg-muted p-3 text-sm">Ask an administrator to manage this subscription.</p>}
+            {isDemo ? <p className="rounded-lg bg-muted p-3 text-sm">Checkout becomes available in your own pharmacy workspace.</p> : session.user.role === "ADMIN" ? <div className="grid gap-2 sm:grid-cols-2"><BillingCheckoutButton interval={interval} method="CARD"><CreditCard /> Card · auto-renew</BillingCheckoutButton><BillingCheckoutButton interval={interval} method="MPESA" variant="outline"><Smartphone /> M-Pesa · pay now</BillingCheckoutButton></div> : <p className="rounded-lg bg-muted p-3 text-sm">Ask an administrator to manage this subscription.</p>}
           </CardContent></Card>; })}
       </div>
       <p className="text-center text-sm text-muted-foreground">Card payments renew automatically. Paystack does not support recurring M-Pesa, so we’ll remind you before each M-Pesa renewal. Failed renewals receive a 7-day grace period.</p>
