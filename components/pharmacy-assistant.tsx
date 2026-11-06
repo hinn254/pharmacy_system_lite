@@ -31,6 +31,8 @@ type ChatMsg = { role: "user" | "assistant"; content: string };
 type PharmacyAssistantCtx = {
   open: boolean;
   setOpen: (v: boolean) => void;
+  draft: string;
+  setDraft: (text: string) => void;
   ask: (text: string) => void;
 };
 
@@ -52,52 +54,38 @@ export function PharmacyAssistantProvider({
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
-  const [prefill, setPrefill] = useState<string | null>(null);
+  const [draft, setDraft] = useState("");
   const ask = useCallback((text: string) => {
-    setPrefill(text);
+    setDraft(text);
     setOpen(true);
   }, []);
 
   const value = useMemo(
-    (): PharmacyAssistantCtx => ({ open, setOpen, ask }),
-    [ask, open],
+    (): PharmacyAssistantCtx => ({ open, setOpen, draft, setDraft, ask }),
+    [ask, draft, open],
   );
   return (
     <PharmacyAssistantContext.Provider value={value}>
       {children}
-      <PharmacyAssistantDock prefill={prefill} onPrefillUsed={() => setPrefill(null)} />
+      <PharmacyAssistantDock />
     </PharmacyAssistantContext.Provider>
   );
 }
 
-function PharmacyAssistantDock({
-  prefill,
-  onPrefillUsed,
-}: {
-  prefill: string | null;
-  onPrefillUsed: () => void;
-}) {
+function PharmacyAssistantDock() {
   const pathname = usePathname();
   const pageContext = pageContextFromPathname(pathname);
   const suggestions = getSuggestedQuestions(pageContext);
-  const { open, setOpen } = usePharmacyAssistant();
+  const { open, setOpen, draft: input, setDraft: setInput } = usePharmacyAssistant();
   const [messages, setMessages] = useState<ChatMsg[]>([]);
-  const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!prefill) return;
-    setInput(prefill);
-    onPrefillUsed();
-  }, [onPrefillUsed, prefill]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, open]);
 
-  const send = useCallback(
-    async (text: string) => {
+  async function send(text: string) {
       const trimmed = text.trim();
       if (!trimmed || loading) return;
 
@@ -135,9 +123,7 @@ function PharmacyAssistantDock({
       } finally {
         setLoading(false);
       }
-    },
-    [loading, messages, pageContext],
-  );
+  }
 
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -162,29 +148,41 @@ function PharmacyAssistantDock({
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent
           side="right"
-          className="flex h-full max-h-dvh w-full flex-col gap-0 p-0 sm:max-w-lg"
+          className="flex h-dvh max-h-dvh w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-lg"
           showCloseButton
         >
-          <SheetHeader className="border-b border-border/60 px-4 py-4 text-left">
-            <SheetTitle>Ask my pharmacy</SheetTitle>
+          <SheetHeader className="shrink-0 border-b border-border/60 px-4 py-4 pr-14 text-left">
+            <div className="flex items-center gap-2.5">
+              <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <MessageCircle className="size-4" aria-hidden="true" />
+              </span>
+              <SheetTitle>Ask my pharmacy</SheetTitle>
+            </div>
             <SheetDescription>
               Answers use your live inventory and sales data for this workspace.
             </SheetDescription>
           </SheetHeader>
 
-          <ScrollArea className="h-[calc(100dvh-13rem)] px-4">
-            <div className="flex flex-col gap-3 py-4">
+          <ScrollArea className="min-h-0 flex-1 bg-muted/15 px-4">
+            <div className="flex min-h-full flex-col gap-3 py-5">
               {messages.length === 0 && (
-                <p className="text-sm text-muted-foreground">
-                  Ask anything about today’s sales, stock, or drugs. Suggestions
-                  below match this page.
-                </p>
+                <div className="my-auto py-10 text-center">
+                  <span className="mx-auto flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                    <MessageCircle className="size-5" aria-hidden="true" />
+                  </span>
+                  <p className="mx-auto mt-4 max-w-xs text-sm font-medium text-foreground">
+                    What would you like to know?
+                  </p>
+                  <p className="mx-auto mt-1.5 max-w-xs text-sm leading-6 text-muted-foreground">
+                    Ask about today’s sales, stock levels, expiring batches, or drugs.
+                  </p>
+                </div>
               )}
               {messages.map((m, i) => (
                 <div
                   key={`${i}-${m.role}`}
                   className={cn(
-                    "max-w-[95%] rounded-xl px-3 py-2 text-sm leading-relaxed",
+                    "max-w-[90%] break-words whitespace-pre-wrap rounded-xl px-3.5 py-2.5 text-sm leading-relaxed",
                     m.role === "user"
                       ? "ml-auto bg-primary text-primary-foreground"
                       : "mr-auto border border-border/80 bg-muted/50",
@@ -202,26 +200,27 @@ function PharmacyAssistantDock({
             </div>
           </ScrollArea>
 
-          <div className="border-t border-border/60 px-4 py-3">
-            <div className="mb-2 flex flex-wrap gap-2">
+          <div className="shrink-0 border-t border-border/60 bg-background px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-10px_30px_rgba(0,0,0,0.04)]">
+            <div className="-mx-1 mb-2 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {suggestions.map((s) => (
                 <button
                   key={s}
                   type="button"
                   disabled={loading}
                   onClick={() => setInput(s)}
-                  className="rounded-full border border-border/80 bg-background px-3 py-1 text-left text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
+                  className="shrink-0 rounded-full border border-border/80 bg-background px-3 py-1.5 text-left text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
                 >
                   {s}
                 </button>
               ))}
             </div>
-            <form onSubmit={onSubmit} className="flex gap-2">
+            <form onSubmit={onSubmit} className="flex items-end gap-2">
               <Textarea
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="Ask about sales, inventory, or drugs…"
-                className="min-h-[80px] flex-1 resize-none"
+                rows={2}
+                className="max-h-32 min-h-14 flex-1 resize-none rounded-xl py-2.5"
                 disabled={loading}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && !e.shiftKey) {
@@ -233,7 +232,7 @@ function PharmacyAssistantDock({
               <Button
                 type="submit"
                 size="icon"
-                className="h-[80px] shrink-0"
+                className="size-11 shrink-0 rounded-xl"
                 disabled={loading || !input.trim()}
                 aria-label="Send"
               >
