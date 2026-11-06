@@ -9,6 +9,9 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { LandingActivityToast } from "@/components/landing-activity-toast";
 
+// Keep the platform-momentum section ready to re-enable once we want it public.
+const SHOW_PLATFORM_MOMENTUM = false;
+
 const operatingFlow = [
   { number: "01", title: "Sell with the right context", body: "Find the medicine, patient, prescription, and price without bouncing between systems.", icon: ShoppingCart },
   { number: "02", title: "Move the right batch", body: "FEFO allocation helps your team dispense stock by expiry while preserving the audit trail.", icon: Boxes },
@@ -25,13 +28,18 @@ const roleOutcomes = [
 
 export default async function Home() {
   const session = await auth();
-  const now = new Date();
-  const activeSince = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-  const [businessesRegistered, teamMembers, activeUsers] = await Promise.all([
-    prisma.organization.count({ where: { slug: { not: "main-pharmacy" } } }),
-    prisma.user.count({ where: { deletedAt: null, organization: { slug: { not: "main-pharmacy" } } } }),
-    prisma.session.groupBy({ by: ["userId"], where: { updatedAt: { gte: activeSince }, expiresAt: { gt: now }, user: { organization: { slug: { not: "main-pharmacy" } } } } }),
-  ]);
+  let businessesRegistered = 0;
+  let teamMembers = 0;
+  let activeUsers: { userId: string }[] = [];
+  if (SHOW_PLATFORM_MOMENTUM) {
+    const now = new Date();
+    const activeSince = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    [businessesRegistered, teamMembers, activeUsers] = await Promise.all([
+      prisma.organization.count({ where: { slug: { not: "main-pharmacy" } } }),
+      prisma.user.count({ where: { deletedAt: null, organization: { slug: { not: "main-pharmacy" } } } }),
+      prisma.session.groupBy({ by: ["userId"], where: { updatedAt: { gte: activeSince }, expiresAt: { gt: now }, user: { organization: { slug: { not: "main-pharmacy" } } } } }),
+    ]);
+  }
   const primaryHref = session ? "/dashboard" : "/register";
   const primaryLabel = session ? "Open your dashboard" : "Create your pharmacy";
 
@@ -77,7 +85,7 @@ export default async function Home() {
         </div>
       </section>
 
-      <section className="border-b border-[#143e36]/10 bg-[#edf5f2]" aria-labelledby="platform-momentum">
+      {SHOW_PLATFORM_MOMENTUM ? <section className="border-b border-[#143e36]/10 bg-[#edf5f2]" aria-labelledby="platform-momentum">
         <div className="mx-auto grid max-w-7xl lg:grid-cols-[1.15fr_1.85fr]">
           <div className="flex flex-col justify-center border-[#143e36]/10 px-5 py-10 sm:px-8 lg:border-r lg:px-10 lg:py-12">
             <h2 id="platform-momentum" className="max-w-md text-2xl font-semibold leading-tight tracking-[-0.025em] sm:text-3xl">Built in Kenya. Growing one pharmacy at a time.</h2>
@@ -98,7 +106,7 @@ export default async function Home() {
             ); })}
           </dl>
         </div>
-      </section>
+      </section> : null}
 
       <section className="border-b border-[#143e36]/10 bg-[#0e2e28] text-white">
         <div className="mx-auto grid max-w-7xl gap-px bg-white/10 sm:grid-cols-2 lg:grid-cols-4">
