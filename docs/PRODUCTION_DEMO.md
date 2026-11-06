@@ -12,13 +12,13 @@ The launch route also applies a 30-minute browser cooldown to reduce accidental 
 
 ## Cleanup
 
-Vercel runs `GET /api/cron/demo-cleanup` hourly. Other hosts should schedule the same request with:
+Vercel runs `GET /api/cron/demo-cleanup` once daily at 03:15 UTC, which is compatible with Hobby-plan cron limits. Other hosts should schedule the same request with:
 
 ```text
 Authorization: Bearer <CRON_SECRET>
 ```
 
-The cleanup deletes only organizations where `isDemo = true` and `demoExpiresAt` is in the past. Organization-owned records and temporary Better Auth users are removed through database cascade rules.
+Demo access still ends after four hours; the dashboard rejects an expired workspace even if the daily cleanup has not run yet. The cleanup deletes up to 500 expired organizations per run where `isDemo = true` and `demoExpiresAt` is in the past. Organization-owned records and temporary Better Auth users are removed through database cascade rules.
 
 ## Safety boundaries
 

@@ -206,7 +206,7 @@ export async function deleteExpiredDemoWorkspaces(now = new Date()) {
   const expired = await prisma.organization.findMany({
     where: { isDemo: true, demoExpiresAt: { lte: now } },
     select: { id: true },
-    take: 100,
+    take: 500,
   });
   let count = 0;
   for (const { id } of expired) {
