@@ -12,6 +12,7 @@ export function proxy(request: NextRequest) {
     pathname.startsWith("/login") ||
     pathname.startsWith("/register") ||
     pathname.startsWith("/clear-session") ||
+    pathname.startsWith("/api/demo/start") ||
     pathname.startsWith("/api/auth");
 
   if (isPublic) {

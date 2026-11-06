@@ -50,9 +50,21 @@ export async function POST(req: Request) {
 
   const org = await prisma.organization.findUnique({
     where: { id: session.user.organizationId },
-    select: { name: true },
+    select: { name: true, isDemo: true },
   });
   const organizationName = org?.name ?? "Pharmacy";
+
+  if (org?.isDemo) {
+    const demoMessages = await prisma.aiChatLog.count({
+      where: { organizationId: session.user.organizationId },
+    });
+    if (demoMessages >= 20) {
+      return NextResponse.json(
+        { error: "This demo has reached its AI message limit. Create your pharmacy to keep asking questions." },
+        { status: 429 },
+      );
+    }
+  }
 
   try {
     const result = await runPharmacyChat({

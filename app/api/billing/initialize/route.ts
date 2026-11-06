@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { BILLING_PLANS } from "@/lib/billing/plans";
 import { ensurePaystackPlan, ensureSubscription } from "@/lib/billing/service";
 import { paystackRequest } from "@/lib/billing/paystack";
+import { isDemoOrganization } from "@/lib/demo/guard";
 
 const inputSchema = z.object({ interval: z.enum(["MONTHLY", "ANNUAL"]), method: z.enum(["CARD", "MPESA"]) });
 
@@ -11,6 +12,7 @@ export async function POST(request: Request) {
   const session = await auth();
   if (!session?.user) return Response.json({ error: "Unauthorized" }, { status: 401 });
   if (session.user.role !== "ADMIN") return Response.json({ error: "Only administrators can manage billing" }, { status: 403 });
+  if (await isDemoOrganization(session.user.organizationId)) return Response.json({ error: "Payments are disabled in the demo. Create your pharmacy to subscribe." }, { status: 403 });
   const parsed = inputSchema.safeParse(await request.json());
   if (!parsed.success) return Response.json({ error: "Invalid billing option" }, { status: 400 });
   const { interval, method } = parsed.data;

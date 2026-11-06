@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { initiateStkPush } from "@/lib/mpesa/daraja";
 import { normalizeKenyaMsisdn } from "@/lib/phone";
 import { Prisma } from "@prisma/client";
+import { requireLiveOrganization } from "@/lib/demo/guard";
 
 export async function requestStkForSale(params: {
   saleId: string;
@@ -13,6 +14,7 @@ export async function requestStkForSale(params: {
 }) {
   const session = await auth();
   if (!session?.user?.organizationId) throw new Error("Unauthorized");
+  await requireLiveOrganization(session.user.organizationId);
 
   const sale = await prisma.sale.findFirst({
     where: {

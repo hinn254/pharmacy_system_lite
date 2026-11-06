@@ -171,11 +171,13 @@ enum BillingPaymentStatus {
 }
 
 model Organization {
-  id        String   @id @default(cuid())
-  name      String
-  slug      String   @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String    @id @default(cuid())
+  name          String
+  slug          String    @unique
+  isDemo        Boolean   @default(false)
+  demoExpiresAt DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
   users            User[]
   settings         OrganizationSettings?
@@ -209,6 +211,8 @@ model Organization {
   consultationEncounters       ConsultationEncounter[]
   consultationMedicationOrders ConsultationMedicationOrder[]
   consultationCheckouts        ConsultationCheckout[]
+
+  @@index([isDemo, demoExpiresAt])
 }
 
 model OrganizationSubscription {
