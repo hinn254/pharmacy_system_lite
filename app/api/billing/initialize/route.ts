@@ -5,6 +5,7 @@ import { BILLING_PLANS } from "@/lib/billing/plans";
 import { ensurePaystackPlan, ensureSubscription } from "@/lib/billing/service";
 import { paystackRequest } from "@/lib/billing/paystack";
 import { isDemoOrganization } from "@/lib/demo/guard";
+import { captureServerEvent } from "@/lib/analytics/server";
 
 const inputSchema = z.object({ interval: z.enum(["MONTHLY", "ANNUAL"]), method: z.enum(["CARD", "MPESA"]) });
 
@@ -24,6 +25,11 @@ export async function POST(request: Request) {
   await prisma.billingPayment.create({
     data: { organizationId: subscription.organizationId, subscriptionId: subscription.id, reference, interval, amountMinor: config.amountMinor, status: "PENDING" },
   });
+  await captureServerEvent(
+    { organizationId: subscription.organizationId, userId: session.user.id, userRole: session.user.role },
+    "checkout_started",
+    {},
+  );
   try {
     const result = await paystackRequest<{ authorization_url: string; access_code: string; reference: string }>("/transaction/initialize", {
       method: "POST",
@@ -41,6 +47,11 @@ export async function POST(request: Request) {
     return Response.json({ url: result.authorization_url });
   } catch (error) {
     await prisma.billingPayment.update({ where: { reference }, data: { status: "FAILED", failureReason: error instanceof Error ? error.message : "Checkout initialization failed" } });
+    await captureServerEvent(
+      { organizationId: subscription.organizationId, userId: session.user.id, userRole: session.user.role },
+      "checkout_failed",
+      { failure_category: "initialization_failed" },
+    );
     return Response.json({ error: error instanceof Error ? error.message : "Could not start checkout" }, { status: 502 });
   }
 }

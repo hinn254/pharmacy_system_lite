@@ -5,6 +5,8 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { allocateFefo } from "@/lib/fefo";
 import { createSaleSchema, type CreateSaleInput } from "@/lib/validations/sale";
+import { captureServerEvent } from "@/lib/analytics/server";
+import { countBucket } from "@/lib/analytics/events";
 import { writeAuditLog } from "@/lib/audit";
 import { Prisma } from "@prisma/client";
 import { PaymentMethod, PaymentStatus, EtimsComplianceStatus } from "@prisma/client";
@@ -461,6 +463,29 @@ export async function createSale(raw: unknown) {
     entityId: sale.id,
     metadata: { saleNumber: sale.saleNumber },
   });
+
+  const paymentMethods = [...new Set(parsed.payments.map((payment) => payment.method))];
+  const analyticsPaymentMethod = paymentMethods.length > 1
+    ? "MIXED"
+    : paymentMethods[0] === "MPESA_STK" || paymentMethods[0] === "MPESA_MANUAL"
+      ? "MPESA"
+      : paymentMethods[0];
+  await captureServerEvent(
+    { organizationId: orgId, userId, userRole: session.user.role },
+    "sale_completed",
+    {
+      payment_method: analyticsPaymentMethod,
+      item_count_bucket: countBucket(parsed.lines.length),
+      workflow: "pos",
+    },
+  );
+  if (paymentMethods.includes("INSURANCE")) {
+    await captureServerEvent(
+      { organizationId: orgId, userId, userRole: session.user.role },
+      "insurance_claim_created",
+      {},
+    );
+  }
 
   revalidatePath("/pos");
   revalidatePath("/dashboard");

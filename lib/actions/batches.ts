@@ -7,6 +7,8 @@ import { prisma } from "@/lib/prisma";
 import { batchDeleteSchema, batchFormSchema } from "@/lib/validations/batch";
 import { writeAuditLog } from "@/lib/audit";
 import { Prisma } from "@prisma/client";
+import { captureServerEvent } from "@/lib/analytics/server";
+import { countBucket } from "@/lib/analytics/events";
 
 export async function listBatches() {
   const session = await auth();
@@ -131,6 +133,11 @@ export async function upsertBatch(input: unknown, id?: string) {
     entityType: "DrugBatch",
     entityId: created.id,
   });
+  await captureServerEvent(
+    { organizationId: orgId, userId, userRole: session.user.role },
+    "stock_batch_received",
+    { item_count_bucket: countBucket(data.quantityOnHand) },
+  );
   revalidatePath("/inventory/batches");
   revalidatePath("/pos");
   revalidatePath("/dashboard");
