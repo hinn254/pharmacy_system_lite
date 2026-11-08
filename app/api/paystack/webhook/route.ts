@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { eventDedupeKey, verifyPaystackSignature } from "@/lib/billing/paystack";
 import { applySuccessfulCharge, markPaymentFailed, recordSubscriptionEvent } from "@/lib/billing/service";
+import { captureServerEvent } from "@/lib/analytics/server";
 
 export async function POST(request: Request) {
   const rawBody = await request.text();
@@ -14,9 +15,39 @@ export async function POST(request: Request) {
   if (existing?.processedAt) return Response.json({ received: true });
   await prisma.paystackWebhookEvent.upsert({ where: { dedupeKey }, create: { dedupeKey, eventType: payload.event, payload: payload as Prisma.InputJsonValue }, update: {} });
   try {
-    if (payload.event === "charge.success") await applySuccessfulCharge(payload.data as never);
+    if (payload.event === "charge.success") {
+      const result = await applySuccessfulCharge(payload.data as never);
+      if (!result.subscription) throw new Error("Successful charge has no subscription");
+      await captureServerEvent(
+        { organizationId: result.subscription.organizationId },
+        "checkout_succeeded",
+        {},
+      );
+      if (result.previousStatus === "TRIALING" || result.previousStatus === "EXPIRED") {
+        await captureServerEvent(
+          { organizationId: result.subscription.organizationId },
+          "subscription_activated",
+          {},
+        );
+      } else if (result.previousStatus === "CANCELLED" || result.previousStatus === "PAST_DUE") {
+        await captureServerEvent(
+          { organizationId: result.subscription.organizationId },
+          "subscription_reactivated",
+          {},
+        );
+      }
+    }
     else if (payload.event === "subscription.create") await recordSubscriptionEvent(payload.data);
-    else if (payload.event === "invoice.payment_failed") await markPaymentFailed(payload.data);
+    else if (payload.event === "invoice.payment_failed") {
+      const subscription = await markPaymentFailed(payload.data);
+      if (subscription) {
+        await captureServerEvent(
+          { organizationId: subscription.organizationId },
+          "checkout_failed",
+          { failure_category: "payment_failed" },
+        );
+      }
+    }
     else if (payload.event === "subscription.not_renew" || payload.event === "subscription.disable") {
       const code = payload.data.subscription_code as string | undefined;
       if (code) await prisma.organizationSubscription.updateMany({ where: { subscriptionCode: code }, data: { cancelAtEnd: true, cancelledAt: payload.event === "subscription.disable" ? new Date() : undefined } });

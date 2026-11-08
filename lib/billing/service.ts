@@ -72,6 +72,7 @@ export async function applySuccessfulCharge(charge: Charge) {
       ? await prisma.organizationSubscription.findFirst({ where: { customerCode: charge.customer.customer_code } })
       : null;
   if (!subscription) throw new Error("Could not match payment to an organization");
+  const previousStatus = subscription.status;
   const interval = payment?.interval ?? (metadata.interval === "ANNUAL" ? "ANNUAL" : "MONTHLY");
   const alreadyApplied = payment?.status === "SUCCESS";
   const paidAt = charge.paid_at ? new Date(charge.paid_at) : new Date();
@@ -89,7 +90,7 @@ export async function applySuccessfulCharge(charge: Charge) {
         data: { status: "ACTIVE", interval, amountMinor: charge.amount, periodStartAt: paidAt, periodEndAt: addBillingInterval(start, interval), graceEndsAt: null, lastPaymentAt: paidAt, customerCode: charge.customer?.customer_code, planCode, cancelAtEnd: false, cancelledAt: null },
       });
     }
-    return { payment, subscription };
+    return { payment, subscription, previousStatus };
   });
 }
 
@@ -113,5 +114,5 @@ export async function markPaymentFailed(data: Record<string, any>) {
   const subscription = await prisma.organizationSubscription.findFirst({ where: { OR: [{ subscriptionCode: code }, { customerCode }] } });
   if (!subscription) return;
   const base = subscription.periodEndAt ?? new Date();
-  await prisma.organizationSubscription.update({ where: { id: subscription.id }, data: { status: "PAST_DUE", graceEndsAt: addDays(base, GRACE_DAYS) } });
+  return prisma.organizationSubscription.update({ where: { id: subscription.id }, data: { status: "PAST_DUE", graceEndsAt: addDays(base, GRACE_DAYS) } });
 }

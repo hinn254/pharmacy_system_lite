@@ -57,6 +57,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { AnalyticsIdentity } from "@/components/analytics-identity";
+import { resetAnalyticsIdentity } from "@/lib/analytics/client";
 
 const links: {
   href: string;
@@ -122,6 +124,7 @@ export function DashboardShell({
   orgBranding,
   billing,
   demo,
+  analyticsIdentity,
 }: {
   children: React.ReactNode;
   role: UserRole;
@@ -135,6 +138,12 @@ export function DashboardShell({
   };
   billing?: { status: "TRIALING" | "ACTIVE" | "GRACE" | "PAST_DUE" | "EXPIRED" | "CANCELLED"; accessEndsAt: Date };
   demo?: boolean;
+  analyticsIdentity: {
+    userId: string;
+    organizationId: string;
+    plan?: string;
+    subscriptionStatus?: string;
+  };
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -173,8 +182,21 @@ export function DashboardShell({
     logoUrl: null,
   };
 
+  function signOut() {
+    resetAnalyticsIdentity();
+    void authClient.signOut({ fetchOptions: { onSuccess: () => router.push("/login") } });
+  }
+
   return (
     <PharmacyAssistantProvider>
+    <AnalyticsIdentity
+      userId={analyticsIdentity.userId}
+      organizationId={analyticsIdentity.organizationId}
+      role={role}
+      plan={analyticsIdentity.plan}
+      subscriptionStatus={analyticsIdentity.subscriptionStatus}
+      isDemo={Boolean(demo)}
+    />
     <SidebarProvider
       style={
         {
@@ -263,7 +285,7 @@ export function DashboardShell({
           <Button
             variant="ghost"
             className="h-10 w-full justify-start gap-2.5 rounded-lg text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground"
-            onClick={() => authClient.signOut({ fetchOptions: { onSuccess: () => router.push("/login") } })}
+            onClick={signOut}
           >
             <LogOut className="size-4" />
             Sign out
@@ -303,7 +325,7 @@ export function DashboardShell({
                 <DropdownMenuItem
                   onSelect={(e) => {
                     e.preventDefault();
-                    authClient.signOut({ fetchOptions: { onSuccess: () => router.push("/login") } });
+                    signOut();
                   }}
                   className="cursor-pointer"
                 >

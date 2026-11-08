@@ -54,6 +54,12 @@ export default async function DashboardLayout({
       }}
       billing={{ status: subscription.status, accessEndsAt: subscription.periodEndAt ?? subscription.trialEndsAt }}
       demo={org.isDemo}
+      analyticsIdentity={{
+        userId: session.user.id,
+        organizationId: orgId,
+        plan: subscription.planCode ?? undefined,
+        subscriptionStatus: subscription.status,
+      }}
     >
       {children}
     </DashboardShell>

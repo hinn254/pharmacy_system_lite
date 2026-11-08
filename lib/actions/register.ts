@@ -7,6 +7,7 @@ import { slugify } from "@/lib/slugify";
 import { createCredentialUser } from "@/lib/auth-users";
 import { normalizeKenyaMsisdn } from "@/lib/phone";
 import { addDays, TRIAL_DAYS } from "@/lib/billing/plans";
+import { captureServerEvent } from "@/lib/analytics/server";
 
 const registerSchema = z.object({
   pharmacyName: z.string().min(2).max(128),
@@ -92,7 +93,7 @@ export async function registerOrganization(
   const slugBase = slugify(data.pharmacyName);
 
   try {
-    await prisma.$transaction(async (tx) => {
+    const registered = await prisma.$transaction(async (tx) => {
       const slug = await allocateUniqueSlug(tx, slugBase);
       const receiptHeader = data.pharmacyName.trim();
 
@@ -118,7 +119,7 @@ export async function registerOrganization(
           },
         },
       });
-      await createCredentialUser(tx, {
+      const user = await createCredentialUser(tx, {
         email,
         password: data.password,
         name: data.name.trim(),
@@ -126,7 +127,13 @@ export async function registerOrganization(
         role: UserRole.ADMIN,
         organizationId: organization.id,
       });
+      return { organizationId: organization.id, userId: user.id };
     });
+    await captureServerEvent(
+      { organizationId: registered.organizationId, userId: registered.userId, userRole: UserRole.ADMIN },
+      "organization_registered",
+      {},
+    );
   } catch (e) {
     console.error("[registerOrganization]", e);
     return {
