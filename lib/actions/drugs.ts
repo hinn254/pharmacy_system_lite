@@ -11,6 +11,7 @@ import {
   drugIsDda,
 } from "@/lib/controlled-drug-categories";
 import { getDdaCategorySetForOrg } from "@/lib/org-controlled-drug-categories";
+import { captureServerEvent } from "@/lib/analytics/server";
 
 export type PosBatchForDrug = {
   batchNumber: string;
@@ -224,6 +225,11 @@ export async function upsertDrug(
     entityType: "Drug",
     entityId: created.id,
   });
+  await captureServerEvent(
+    { organizationId: orgId, userId, userRole: session.user.role },
+    "inventory_item_created",
+    {},
+  );
   revalidatePath("/inventory/drugs");
   return created;
 }

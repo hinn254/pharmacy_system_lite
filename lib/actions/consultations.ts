@@ -17,6 +17,7 @@ import { allocateFefo } from "@/lib/fefo";
 import { createSaleFromConsultationSchema } from "@/lib/validations/consultation";
 import { runPharmacyChat } from "@/lib/ai/chat";
 import { queryConsultationCases } from "@/lib/consultation-case-queries";
+import { captureServerEvent } from "@/lib/analytics/server";
 
 function requireOrg(session: Session | null) {
   if (!session?.user?.organizationId) throw new Error("Unauthorized");
@@ -512,6 +513,12 @@ export async function pharmTechMarkCaseDispensed(caseId: string) {
     where: { id: caseId, organizationId: orgId },
     data: { status: "CLOSED" },
   });
+
+  await captureServerEvent(
+    { organizationId: orgId, userId: session!.user.id, userRole: role },
+    "consultation_completed",
+    {},
+  );
 
   revalidatePath(`/consultations/${caseId}`);
   revalidatePath("/consultations");

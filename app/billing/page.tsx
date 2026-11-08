@@ -9,6 +9,7 @@ import { BillingCheckoutButton, CancelSubscriptionButton } from "@/components/bi
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { BillingAnalytics } from "@/components/billing-analytics";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +24,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
   ]);
   const isDemo = organization?.isDemo === true;
   const renewalDate = subscription.periodEndAt ?? subscription.trialEndsAt;
-  return <main className="min-h-screen bg-linear-to-b from-emerald-50/70 to-background px-4 py-8 md:px-8">
+  return <main className="min-h-screen bg-linear-to-b from-emerald-50/70 to-background px-4 py-8 md:px-8"><BillingAnalytics />
     <div className="mx-auto max-w-6xl space-y-8">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div><Link href="/dashboard" className="text-sm font-medium text-emerald-700">← Back to workspace</Link><h1 className="mt-3 text-3xl font-bold tracking-tight">Simple pricing. Your whole pharmacy.</h1><p className="mt-2 text-muted-foreground">Sales, stock, insurance, eTIMS, your client website and AI assistance in one subscription.</p></div>
