@@ -57,6 +57,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { BrandMark } from "@/components/brand-mark";
 import { AnalyticsIdentity } from "@/components/analytics-identity";
 import { resetAnalyticsIdentity } from "@/lib/analytics/client";
 
@@ -220,7 +221,7 @@ export function DashboardShell({
                   loading="eager"
                 />
               ) : (
-                <Pill className="size-[22px]" strokeWidth={2.25} />
+                <BrandMark className="size-11 text-sidebar-primary" />
               )}
             </div>
             <div className="min-w-0 flex-1 leading-tight">
