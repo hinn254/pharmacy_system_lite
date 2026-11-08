@@ -119,7 +119,7 @@ export default async function Home() {
               <Link href={primaryHref} className="inline-flex h-13 items-center justify-center gap-2 rounded-lg bg-[#006b5d] px-6 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(0,107,93,0.18)] transition-all hover:-translate-y-0.5 hover:bg-[#00594e]">{primaryLabel}<ArrowRight className="size-4" aria-hidden="true" /></Link>
               {!session ? <StartDemoButton /> : null}
             </div>
-            {!session ? <p className="mt-3 text-sm text-[#617871]">No signup needed. Explore a sample pharmacy for four hours.</p> : null}
+            {!session ? <p className="mt-3 text-sm text-[#617871]">No signup needed. See sales, stock alerts, and fast and slow movers with realistic sample data.</p> : null}
             <div className="mt-8 flex flex-wrap gap-x-6 gap-y-3 text-sm text-[#49635d]">
               {["Owner-led setup", "Role-based staff access", "Built around Kenyan workflows"].map((item) => <span key={item} className="flex items-center gap-2"><CircleCheck className="size-4 text-[#008c78]" aria-hidden="true" />{item}</span>)}
             </div>

@@ -3,10 +3,6 @@
     {
       "path": "/api/cron/purge-batches",
       "schedule": "0 2 * * *"
-    },
-    {
-      "path": "/api/cron/demo-cleanup",
-      "schedule": "15 3 * * *"
     }
   ]
 }

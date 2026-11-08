@@ -338,10 +338,13 @@ async function main() {
     where: { slug: "main-pharmacy" },
     update: {
       name: "Nairobi Central Pharmacy",
+      isDemo: true,
+      demoExpiresAt: null,
     },
     create: {
       name: "Nairobi Central Pharmacy",
       slug: "main-pharmacy",
+      isDemo: true,
       settings: {
         create: {
           // Keep math simple for analytics checks: totals == subtotals (no VAT).

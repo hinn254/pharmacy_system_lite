@@ -29,7 +29,6 @@ export default async function DashboardLayout({
       select: {
         name: true,
         isDemo: true,
-        demoExpiresAt: true,
         settings: {
           select: { businessName: true, businessTagline: true, logoUrl: true },
         },
@@ -38,7 +37,7 @@ export default async function DashboardLayout({
     ensureSubscription(orgId),
   ]);
 
-  if (!org || (org.isDemo && org.demoExpiresAt && org.demoExpiresAt <= new Date())) {
+  if (!org) {
     redirectToLoginClearingSession();
   }
 
@@ -54,7 +53,7 @@ export default async function DashboardLayout({
         logoUrl: org?.settings?.logoUrl ?? null,
       }}
       billing={{ status: subscription.status, accessEndsAt: subscription.periodEndAt ?? subscription.trialEndsAt }}
-      demo={org.isDemo ? { expiresAt: org.demoExpiresAt ?? subscription.trialEndsAt } : undefined}
+      demo={org.isDemo}
     >
       {children}
     </DashboardShell>
