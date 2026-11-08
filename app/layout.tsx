@@ -14,9 +14,26 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Pharmacy OS",
+  metadataBase: new URL("https://pharmacyos.co.ke"),
+  title: {
+    default: "Pharmacy OS",
+    template: "%s | Pharmacy OS",
+  },
   description:
     "Run sales, dispensing, inventory, patients, insurance, finance, and pharmacy operations from one connected workspace.",
+  applicationName: "Pharmacy OS",
+  authors: [{ name: "Pharmacy OS", url: "https://pharmacyos.co.ke" }],
+  creator: "Pharmacy OS",
+  publisher: "Pharmacy OS",
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
+  },
+  icons: {
+    icon: [{ url: "/icon", type: "image/png" }],
+    apple: [{ url: "/apple-icon", type: "image/png" }],
+  },
 };
 
 export default function RootLayout({

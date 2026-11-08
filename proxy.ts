@@ -9,6 +9,11 @@ export function proxy(request: NextRequest) {
 
   const isPublic =
     pathname === "/" ||
+    pathname === "/robots.txt" ||
+    pathname === "/sitemap.xml" ||
+    pathname === "/icon" ||
+    pathname === "/apple-icon" ||
+    pathname === "/opengraph-image" ||
     pathname.startsWith("/login") ||
     pathname.startsWith("/register") ||
     pathname.startsWith("/clear-session") ||
@@ -22,7 +27,19 @@ export function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  if (!hasSessionCookie) {
+  const isPrivate =
+    pathname.startsWith("/api/") ||
+    pathname.startsWith("/admin/") ||
+    pathname.startsWith("/billing") ||
+    pathname.startsWith("/clients") ||
+    pathname.startsWith("/consultations") ||
+    pathname.startsWith("/dashboard") ||
+    pathname.startsWith("/doctor") ||
+    pathname.startsWith("/inventory") ||
+    pathname.startsWith("/patients") ||
+    pathname.startsWith("/pos");
+
+  if (isPrivate && !hasSessionCookie) {
     const login = new URL("/login", request.url);
     login.searchParams.set("callbackUrl", pathname);
     return NextResponse.redirect(login);

@@ -4,8 +4,14 @@ import { redirectToLoginClearingSession } from "@/lib/auth-redirect";
 import { getNavBadgeCounts } from "@/lib/nav-badge-counts";
 import { prisma } from "@/lib/prisma";
 import { ensureSubscription } from "@/lib/billing/service";
+import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Workspace",
+  robots: { index: false, follow: false },
+};
 
 export default async function DashboardLayout({
   children,

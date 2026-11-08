@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import type { Metadata } from "next";
 import {
   ArrowRight, BadgeCheck, BarChart3, Boxes, BrainCircuit, Check,
   CircleCheck, FileCheck2, Globe2, Pill, ReceiptText, ShieldCheck,
@@ -12,6 +13,48 @@ import { StartDemoButton } from "@/components/start-demo-button";
 
 // Keep the platform-momentum section ready to re-enable once we want it public.
 const SHOW_PLATFORM_MOMENTUM = false;
+
+const title = "Pharmacy Management Software Kenya | Pharmacy OS";
+const description =
+  "Run pharmacy POS, dispensing, batch inventory, patients, M-Pesa payments, insurance and finance in one connected workspace. Start with Pharmacy OS.";
+
+export const metadata: Metadata = {
+  title: { absolute: title },
+  description,
+  alternates: { canonical: "/" },
+  openGraph: {
+    type: "website",
+    locale: "en_KE",
+    url: "/",
+    siteName: "Pharmacy OS",
+    title,
+    description,
+    images: [
+      {
+        url: "/opengraph-image",
+        width: 1200,
+        height: 630,
+        alt: "Pharmacy OS — pharmacy management software built for Kenyan pharmacies",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title,
+    description,
+    images: ["/opengraph-image"],
+  },
+};
+
+const organizationJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: "Pharmacy OS",
+  url: "https://pharmacyos.co.ke",
+  logo: "https://pharmacyos.co.ke/icon",
+  description:
+    "Pharmacy management software built for Kenyan pharmacies, connecting point of sale, dispensing, batch inventory, patients, insurance, finance, and operational reporting.",
+};
 
 const operatingFlow = [
   { number: "01", title: "Sell with the right context", body: "Find the medicine, patient, prescription, and price without bouncing between systems.", icon: ShoppingCart },
@@ -46,6 +89,12 @@ export default async function Home() {
 
   return (
     <main className="min-h-screen overflow-hidden bg-[#f4f8f6] text-[#102521]">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(organizationJsonLd).replace(/</g, "\\u003c"),
+        }}
+      />
       <nav className="relative z-30 border-b border-[#143e36]/10 bg-[#f4f8f6]/90 backdrop-blur-md">
         <div className="mx-auto flex h-18 max-w-7xl items-center justify-between px-5 sm:px-8 lg:px-10">
           <Link href="/" className="flex items-center gap-3" aria-label="Pharmacy OS home">
@@ -64,8 +113,8 @@ export default async function Home() {
         <div className="relative mx-auto grid max-w-7xl items-center gap-14 px-5 py-16 sm:px-8 sm:py-20 lg:grid-cols-[0.85fr_1.15fr] lg:px-10 lg:py-24">
           <div className="max-w-2xl">
             <div className="mb-7 flex items-center gap-3 text-sm font-semibold text-[#006b5d]"><span className="h-px w-8 bg-[#006b5d]" />Pharmacy operations, connected end to end</div>
-            <h1 className="max-w-xl text-balance text-5xl font-semibold leading-[0.98] tracking-[-0.055em] sm:text-6xl lg:text-7xl">One sale should move your whole pharmacy forward.</h1>
-            <p className="mt-7 max-w-xl text-pretty text-lg leading-8 text-[#49635d] sm:text-xl">Pharmacy OS connects selling, dispensing, stock, patients, insurance, finance, and the decisions that follow—so your team works from one operational truth.</p>
+            <h1 className="max-w-xl text-balance text-5xl font-semibold leading-[0.98] tracking-[-0.04em] sm:text-6xl lg:text-7xl">Pharmacy management software built for Kenyan pharmacies.</h1>
+            <p className="mt-7 max-w-xl text-pretty text-lg leading-8 text-[#49635d] sm:text-xl">Connect selling, dispensing, stock, patients, insurance, and finance so your team works from one operational truth.</p>
             <div className="mt-9 flex flex-col gap-3 sm:flex-row">
               <Link href={primaryHref} className="inline-flex h-13 items-center justify-center gap-2 rounded-lg bg-[#006b5d] px-6 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(0,107,93,0.18)] transition-all hover:-translate-y-0.5 hover:bg-[#00594e]">{primaryLabel}<ArrowRight className="size-4" aria-hidden="true" /></Link>
               {!session ? <StartDemoButton /> : null}
