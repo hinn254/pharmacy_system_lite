@@ -57,6 +57,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { BrandMark } from "@/components/brand-mark";
 
 const links: {
   href: string;
@@ -198,7 +199,7 @@ export function DashboardShell({
                   loading="eager"
                 />
               ) : (
-                <Pill className="size-[22px]" strokeWidth={2.25} />
+                <BrandMark className="size-11 text-sidebar-primary" />
               )}
             </div>
             <div className="min-w-0 flex-1 leading-tight">

@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import { BrandMark } from "@/components/brand-mark";
 
 export type AuthShellVariant = "login" | "register";
 
@@ -116,9 +117,7 @@ export function AuthShell({ variant, children, footer }: AuthShellProps) {
             href="/"
             className="hidden w-fit items-center gap-2.5 rounded-xl text-lg font-semibold tracking-tight text-foreground transition-opacity hover:opacity-90 md:inline-flex"
           >
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-sm font-bold text-primary-foreground shadow-md shadow-primary/25">
-              Rx
-            </span>
+            <BrandMark className="size-10 text-primary shadow-md shadow-primary/25" />
             <span className="flex flex-col leading-tight">
               <span>Pharmacy OS</span>
               <span className="text-xs font-normal text-muted-foreground">
@@ -164,9 +163,7 @@ export function AuthShell({ variant, children, footer }: AuthShellProps) {
           href="/"
           className="mb-6 inline-flex items-center gap-2.5 self-start rounded-xl text-lg font-semibold tracking-tight text-foreground md:hidden"
         >
-          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-xs font-bold text-primary-foreground shadow-md shadow-primary/20">
-            Rx
-          </span>
+          <BrandMark className="size-9 text-primary shadow-md shadow-primary/20" />
           <span>Pharmacy OS</span>
         </Link>
         <div className="w-full max-w-[420px] space-y-8">

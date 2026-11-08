@@ -3,13 +3,14 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import {
   ArrowRight, BadgeCheck, BarChart3, Boxes, BrainCircuit, Check,
-  CircleCheck, FileCheck2, Globe2, Pill, ReceiptText, ShieldCheck,
+  CircleCheck, FileCheck2, Globe2, ReceiptText, ShieldCheck,
   ShoppingCart, Stethoscope, Users, WalletCards, Activity, Building2, UserRoundCheck,
 } from "lucide-react";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { LandingActivityToast } from "@/components/landing-activity-toast";
 import { StartDemoButton } from "@/components/start-demo-button";
+import { BrandMark } from "@/components/brand-mark";
 
 // Keep the platform-momentum section ready to re-enable once we want it public.
 const SHOW_PLATFORM_MOMENTUM = false;
@@ -34,7 +35,7 @@ export const metadata: Metadata = {
         url: "/opengraph-image",
         width: 1200,
         height: 630,
-        alt: "Pharmacy OS — pharmacy management software built for Kenyan pharmacies",
+        alt: "Pharmacy OS — connected pharmacy operations from shelf to patient",
       },
     ],
   },
@@ -98,7 +99,7 @@ export default async function Home() {
       <nav className="relative z-30 border-b border-[#143e36]/10 bg-[#f4f8f6]/90 backdrop-blur-md">
         <div className="mx-auto flex h-18 max-w-7xl items-center justify-between px-5 sm:px-8 lg:px-10">
           <Link href="/" className="flex items-center gap-3" aria-label="Pharmacy OS home">
-            <span className="flex size-10 items-center justify-center rounded-xl bg-[#006b5d] text-white shadow-sm"><Pill className="size-5" aria-hidden="true" /></span>
+            <BrandMark className="size-10 text-[#006b5d] shadow-sm" />
             <span><span className="block text-base font-semibold tracking-[-0.02em]">Pharmacy OS</span><span className="block text-[10px] font-semibold uppercase tracking-[0.19em] text-[#55706a]">Built for the whole pharmacy</span></span>
           </Link>
           <div className="flex items-center gap-2 sm:gap-3">
@@ -220,11 +221,11 @@ export default async function Home() {
       </section>
 
       <section className="bg-[#0e2e28] text-white">
-        <div className="mx-auto flex max-w-5xl flex-col items-center px-5 py-20 text-center sm:px-8 sm:py-28"><Pill className="size-8 text-[#72ddc9]" aria-hidden="true" /><h2 className="mt-7 text-balance text-4xl font-semibold tracking-[-0.05em] sm:text-6xl">Start with your pharmacy. Bring the whole operation with you.</h2><p className="mt-6 max-w-2xl text-lg leading-8 text-white/65">Create the owner account, open your workspace, and shape the setup around the way your team works.</p><div className="mt-9 flex flex-col gap-3 sm:flex-row"><Link href={primaryHref} className="inline-flex h-13 items-center justify-center gap-2 rounded-lg bg-[#72ddc9] px-7 text-sm font-semibold text-[#0e2e28] transition-colors hover:bg-white">{primaryLabel}<ArrowRight className="size-4" aria-hidden="true" /></Link>{!session ? <Link href="/login" className="inline-flex h-13 items-center justify-center rounded-lg px-7 text-sm font-semibold text-white ring-1 ring-white/25 transition-colors hover:bg-white/10">Sign in</Link> : null}</div></div>
+        <div className="mx-auto flex max-w-5xl flex-col items-center px-5 py-20 text-center sm:px-8 sm:py-28"><BrandMark className="size-11 text-[#006b5d] ring-1 ring-white/10" /><h2 className="mt-7 text-balance text-4xl font-semibold tracking-[-0.04em] sm:text-6xl">Start with your pharmacy. Bring the whole operation with you.</h2><p className="mt-6 max-w-2xl text-lg leading-8 text-white/65">Create the owner account, open your workspace, and shape the setup around the way your team works.</p><div className="mt-9 flex flex-col gap-3 sm:flex-row"><Link href={primaryHref} className="inline-flex h-13 items-center justify-center gap-2 rounded-lg bg-[#72ddc9] px-7 text-sm font-semibold text-[#0e2e28] transition-colors hover:bg-white">{primaryLabel}<ArrowRight className="size-4" aria-hidden="true" /></Link>{!session ? <Link href="/login" className="inline-flex h-13 items-center justify-center rounded-lg px-7 text-sm font-semibold text-white ring-1 ring-white/25 transition-colors hover:bg-white/10">Sign in</Link> : null}</div></div>
       </section>
 
       <footer className="bg-[#0a241f] text-white/60">
-        <div className="mx-auto flex max-w-7xl flex-col gap-5 px-5 py-8 text-sm sm:flex-row sm:items-center sm:justify-between sm:px-8 lg:px-10"><div className="flex items-center gap-2 font-semibold text-white"><Pill className="size-4" aria-hidden="true" />Pharmacy OS</div><p>Built for the work between the shelf, the patient, and the business.</p><div className="flex gap-5"><Link href="/login" className="hover:text-white">Sign in</Link><Link href="/register" className="hover:text-white">Create pharmacy</Link></div></div>
+        <div className="mx-auto flex max-w-7xl flex-col gap-5 px-5 py-8 text-sm sm:flex-row sm:items-center sm:justify-between sm:px-8 lg:px-10"><div className="flex items-center gap-2 font-semibold text-white"><BrandMark className="size-5 text-[#006b5d]" />Pharmacy OS</div><p>Built for the work between the shelf, the patient, and the business.</p><div className="flex gap-5"><Link href="/login" className="hover:text-white">Sign in</Link><Link href="/register" className="hover:text-white">Create pharmacy</Link></div></div>
       </footer>
       <LandingActivityToast />
     </main>
