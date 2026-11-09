@@ -27,6 +27,8 @@ export function DemoRolePicker() {
     try {
       const response = await fetch("/api/demo/start", {
         method: "POST",
+        credentials: "same-origin",
+        cache: "no-store",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ role }),
       });

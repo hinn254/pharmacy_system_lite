@@ -13,7 +13,11 @@ export function StartDemoButton() {
     setLoading(true);
     setError("");
     try {
-      const response = await fetch("/api/demo/start", { method: "POST" });
+      const response = await fetch("/api/demo/start", {
+        method: "POST",
+        credentials: "same-origin",
+        cache: "no-store",
+      });
       const payload = (await response.json().catch(() => null)) as { error?: string } | null;
       if (!response.ok) throw new Error(payload?.error || "The demo could not be opened.");
       // A full navigation ensures the newly issued HttpOnly session cookie is

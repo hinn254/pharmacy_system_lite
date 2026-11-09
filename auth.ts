@@ -3,9 +3,22 @@ import { prismaAdapter } from "@better-auth/prisma-adapter";
 import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
 
+const authSecret = process.env.BETTER_AUTH_SECRET ?? process.env.AUTH_SECRET;
+const authBaseURL = process.env.BETTER_AUTH_URL;
+
+if (process.env.NODE_ENV === "production" && (!authSecret || authSecret.length < 32)) {
+  throw new Error("BETTER_AUTH_SECRET must be set to the same 32+ character value for every production instance.");
+}
+
 export const authInstance = betterAuth({
   database: prismaAdapter(prisma, { provider: "postgresql" }),
-  secret: process.env.BETTER_AUTH_SECRET ?? process.env.AUTH_SECRET,
+  secret: authSecret,
+  baseURL: authBaseURL,
+  trustedOrigins: [
+    "https://pharmacyos.co.ke",
+    "https://www.pharmacyos.co.ke",
+    ...(authBaseURL ? [authBaseURL] : []),
+  ],
   emailAndPassword: {
     enabled: true,
     disableSignUp: true,
@@ -13,6 +26,10 @@ export const authInstance = betterAuth({
   session: {
     expiresIn: 60 * 60 * 24 * 7,
     updateAge: 60 * 60 * 24,
+    cookieCache: {
+      enabled: true,
+      maxAge: 60 * 5,
+    },
   },
   user: {
     additionalFields: {
