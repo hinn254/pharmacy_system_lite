@@ -11,6 +11,7 @@ import { prisma } from "@/lib/prisma";
 import { LandingActivityToast } from "@/components/landing-activity-toast";
 import { StartDemoButton } from "@/components/start-demo-button";
 import { BrandMark } from "@/components/brand-mark";
+import { PublicHeader } from "@/components/marketing/public-header";
 
 // Keep the platform-momentum section ready to re-enable once we want it public.
 const SHOW_PLATFORM_MOMENTUM = false;
@@ -96,25 +97,7 @@ export default async function Home() {
           __html: JSON.stringify(organizationJsonLd).replace(/</g, "\\u003c"),
         }}
       />
-      <nav className="relative z-30 border-b border-[#143e36]/10 bg-[#f4f8f6]/90 backdrop-blur-md">
-        <div className="mx-auto flex h-18 max-w-7xl items-center justify-between px-5 sm:px-8 lg:px-10">
-          <Link href="/" className="flex items-center gap-3" aria-label="Pharmacy OS home">
-            <BrandMark className="size-10 text-[#006b5d] shadow-sm" />
-            <span><span className="block text-base font-semibold tracking-[-0.02em]">Pharmacy OS</span><span className="block text-[10px] font-semibold uppercase tracking-[0.19em] text-[#55706a]">Built for the whole pharmacy</span></span>
-          </Link>
-          <div className="hidden items-center gap-5 text-sm font-medium text-[#49635d] xl:flex">
-            <Link href="/features/pharmacy-pos" className="hover:text-[#006b5d]">POS</Link>
-            <Link href="/features/inventory-management" className="hover:text-[#006b5d]">Inventory</Link>
-            <Link href="/features/insurance-management" className="hover:text-[#006b5d]">Insurance</Link>
-            <Link href="/pricing" className="hover:text-[#006b5d]">Pricing</Link>
-            <Link href="/demo" className="hover:text-[#006b5d]">Demo</Link>
-          </div>
-          <div className="flex items-center gap-2 sm:gap-3">
-            {!session ? <Link href="/login" className="inline-flex h-10 items-center justify-center px-3 text-sm font-semibold text-[#294a43] transition-colors hover:text-[#006b5d] sm:px-4">Sign in</Link> : null}
-            <Link href={primaryHref} className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#006b5d] px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#00594e] sm:px-5"><span className="hidden sm:inline">{primaryLabel}</span><span className="sm:hidden">{session ? "Dashboard" : "Get started"}</span><ArrowRight className="size-4" aria-hidden="true" /></Link>
-          </div>
-        </div>
-      </nav>
+      <PublicHeader initialAuthenticated={Boolean(session)} />
 
       <section className="relative border-b border-[#143e36]/10">
         <div className="pointer-events-none absolute inset-x-0 top-0 h-[32rem] bg-[radial-gradient(circle_at_70%_10%,rgba(66,170,150,0.13),transparent_48%)]" />

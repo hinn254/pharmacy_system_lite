@@ -1,33 +1,10 @@
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
 import { BrandMark } from "@/components/brand-mark";
 import { featurePages, featureSlugs } from "@/lib/marketing/features";
+import { PublicHeader } from "./public-header";
 
 export function MarketingHeader() {
-  return (
-    <header className="border-b border-[#143e36]/10 bg-[#f4f8f6] text-[#102521]">
-      <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-5 py-4 sm:px-8 lg:px-10">
-        <Link href="/" className="flex items-center gap-3" aria-label="Pharmacy OS home">
-          <BrandMark className="size-10 text-[#006b5d]" />
-          <span className="font-semibold tracking-[-0.02em]">Pharmacy OS</span>
-        </Link>
-        <nav aria-label="Public navigation" className="order-3 grid w-full grid-cols-3 gap-x-4 gap-y-2 text-sm font-medium text-[#49635d] lg:order-2 lg:flex lg:w-auto lg:gap-5">
-          <Link href="/features/pharmacy-pos" className="hover:text-[#006b5d]">POS</Link>
-          <Link href="/features/inventory-management" className="hover:text-[#006b5d]">Inventory</Link>
-          <Link href="/features/insurance-management" className="hover:text-[#006b5d]">Insurance</Link>
-          <Link href="/features/pharmacy-analytics" className="hover:text-[#006b5d]">Analytics</Link>
-          <Link href="/pricing" className="hover:text-[#006b5d]">Pricing</Link>
-          <Link href="/demo" className="hover:text-[#006b5d]">Demo</Link>
-        </nav>
-        <div className="order-2 flex items-center gap-2 lg:order-3">
-          <Link href="/login" className="hidden px-3 py-2 text-sm font-semibold text-[#294a43] hover:text-[#006b5d] sm:inline-flex">Sign in</Link>
-          <Link href="/register" className="inline-flex h-10 items-center gap-2 rounded-lg bg-[#006b5d] px-4 text-sm font-semibold text-white hover:bg-[#00594e]">
-            Create pharmacy <ArrowRight className="size-4" aria-hidden="true" />
-          </Link>
-        </div>
-      </div>
-    </header>
-  );
+  return <PublicHeader />;
 }
 
 export function MarketingFooter() {
