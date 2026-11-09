@@ -14,16 +14,48 @@ export async function POST(request: NextRequest) {
   if (process.env.ALLOW_PUBLIC_DEMO === "false") {
     return Response.json({ error: "The live demo is not available right now." }, { status: 404 });
   }
-  const email = (process.env.DEMO_LOGIN_EMAIL ?? DEMO_LOGIN_EMAILS[0]).toLowerCase().trim();
+  const configuredEmail = (process.env.DEMO_LOGIN_EMAIL ?? DEMO_LOGIN_EMAILS[0]).toLowerCase().trim();
+  const preferredEmails = [...new Set([configuredEmail, DEMO_LOGIN_EMAILS[0]])];
   const password = process.env.SEED_DEMO_PASSWORD ?? DEFAULT_DEMO_PASSWORD;
-  const demoUser = await prisma.user.findUnique({
-    where: { email },
+  const preferredUsers = await prisma.user.findMany({
+    where: {
+      email: { in: preferredEmails },
+      bannedAt: null,
+      deletedAt: null,
+      organization: {
+        OR: [{ isDemo: true }, { slug: "main-pharmacy" }],
+      },
+    },
     select: {
       id: true,
+      email: true,
       organization: { select: { id: true, slug: true, isDemo: true } },
     },
   });
-  if (!demoUser || (!demoUser.organization.isDemo && demoUser.organization.slug !== "main-pharmacy")) {
+  let demoUser = preferredEmails
+    .map((preferredEmail) => preferredUsers.find((user) => user.email === preferredEmail))
+    .find((user) => user !== undefined);
+
+  // Production can predate the local seed emails or retain a stale
+  // DEMO_LOGIN_EMAIL value. Reuse an active credential administrator from the
+  // designated shared workspace instead of making the public demo unavailable.
+  const fallbackUser = await prisma.user.findFirst({
+    where: {
+      role: "ADMIN",
+      bannedAt: null,
+      deletedAt: null,
+      organization: { slug: "main-pharmacy" },
+    },
+    orderBy: { createdAt: "asc" },
+    select: {
+      id: true,
+      email: true,
+      organization: { select: { id: true, slug: true, isDemo: true } },
+    },
+  });
+  demoUser ??= fallbackUser ?? undefined;
+
+  if (!demoUser) {
     return Response.json(
       { error: "The sample pharmacy is being prepared. Please try again shortly." },
       { status: 503 },
@@ -37,6 +69,7 @@ export async function POST(request: NextRequest) {
     });
   }
 
+  const email = demoUser.email;
   try {
     let response = await authInstance.api.signInEmail({
       body: { email, password },

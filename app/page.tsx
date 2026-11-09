@@ -102,6 +102,13 @@ export default async function Home() {
             <BrandMark className="size-10 text-[#006b5d] shadow-sm" />
             <span><span className="block text-base font-semibold tracking-[-0.02em]">Pharmacy OS</span><span className="block text-[10px] font-semibold uppercase tracking-[0.19em] text-[#55706a]">Built for the whole pharmacy</span></span>
           </Link>
+          <div className="hidden items-center gap-5 text-sm font-medium text-[#49635d] xl:flex">
+            <Link href="/features/pharmacy-pos" className="hover:text-[#006b5d]">POS</Link>
+            <Link href="/features/inventory-management" className="hover:text-[#006b5d]">Inventory</Link>
+            <Link href="/features/insurance-management" className="hover:text-[#006b5d]">Insurance</Link>
+            <Link href="/pricing" className="hover:text-[#006b5d]">Pricing</Link>
+            <Link href="/demo" className="hover:text-[#006b5d]">Demo</Link>
+          </div>
           <div className="flex items-center gap-2 sm:gap-3">
             {!session ? <Link href="/login" className="inline-flex h-10 items-center justify-center px-3 text-sm font-semibold text-[#294a43] transition-colors hover:text-[#006b5d] sm:px-4">Sign in</Link> : null}
             <Link href={primaryHref} className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#006b5d] px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#00594e] sm:px-5"><span className="hidden sm:inline">{primaryLabel}</span><span className="sm:hidden">{session ? "Dashboard" : "Get started"}</span><ArrowRight className="size-4" aria-hidden="true" /></Link>
@@ -225,7 +232,7 @@ export default async function Home() {
       </section>
 
       <footer className="bg-[#0a241f] text-white/60">
-        <div className="mx-auto flex max-w-7xl flex-col gap-5 px-5 py-8 text-sm sm:flex-row sm:items-center sm:justify-between sm:px-8 lg:px-10"><div className="flex items-center gap-2 font-semibold text-white"><BrandMark className="size-5 text-[#006b5d]" />Pharmacy OS</div><p>Built for the work between the shelf, the patient, and the business.</p><div className="flex gap-5"><Link href="/login" className="hover:text-white">Sign in</Link><Link href="/register" className="hover:text-white">Create pharmacy</Link></div></div>
+        <div className="mx-auto flex max-w-7xl flex-col gap-5 px-5 py-8 text-sm sm:px-8 lg:flex-row lg:items-center lg:justify-between lg:px-10"><div className="flex items-center gap-2 font-semibold text-white"><BrandMark className="size-5 text-[#006b5d]" />Pharmacy OS</div><p>Built for the work between the shelf, the patient, and the business.</p><div className="flex flex-wrap gap-x-5 gap-y-2"><Link href="/features/pharmacy-pos" className="hover:text-white">POS</Link><Link href="/features/inventory-management" className="hover:text-white">Inventory</Link><Link href="/pricing" className="hover:text-white">Pricing</Link><Link href="/demo" className="hover:text-white">Demo</Link><Link href="/login" className="hover:text-white">Sign in</Link><Link href="/register" className="hover:text-white">Create pharmacy</Link></div></div>
       </footer>
       <LandingActivityToast />
     </main>

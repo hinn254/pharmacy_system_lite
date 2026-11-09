@@ -89,8 +89,23 @@ export async function setCredentialPassword(
   password: string,
 ) {
   const passwordHash = await hashPassword(password);
-  await db.account.updateMany({
+  const credentialAccount = await db.account.findFirst({
     where: { userId, providerId: "credential" },
-    data: { password: passwordHash },
+    select: { id: true },
+  });
+  if (credentialAccount) {
+    await db.account.update({
+      where: { id: credentialAccount.id },
+      data: { password: passwordHash },
+    });
+    return;
+  }
+  await db.account.create({
+    data: {
+      providerId: "credential",
+      accountId: userId,
+      userId,
+      password: passwordHash,
+    },
   });
 }
