@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
 import type { UserRole } from "@prisma/client";
 import {
@@ -87,6 +87,12 @@ const links: {
   { href: "/billing", label: "Billing", icon: CreditCard, roles: ["ADMIN"] },
 ];
 
+function hardNavigate(event: React.MouseEvent<HTMLAnchorElement>, href: string) {
+  if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+  event.preventDefault();
+  window.location.assign(href);
+}
+
 function AskPharmacySidebarItem() {
   const { setOpen } = usePharmacyAssistant();
   return (
@@ -147,7 +153,6 @@ export function DashboardShell({
   };
 }) {
   const pathname = usePathname();
-  const router = useRouter();
   const [navBadgeCounts, setNavBadgeCounts] =
     useState<NavBadgeCounts>(initialNavBadgeCounts);
 
@@ -185,7 +190,9 @@ export function DashboardShell({
 
   function signOut() {
     resetAnalyticsIdentity();
-    void authClient.signOut({ fetchOptions: { onSuccess: () => router.push("/login") } });
+    // A document navigation clears any cached protected RSC payloads after logout.
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+    void authClient.signOut({ fetchOptions: { onSuccess: () => window.location.assign("/login") } });
   }
 
   return (
@@ -209,6 +216,8 @@ export function DashboardShell({
         <SidebarHeader className="gap-0 border-b border-sidebar-border/70 px-4 pb-5 pt-4">
           <Link
             href="/dashboard"
+            prefetch={false}
+            onClick={(event) => hardNavigate(event, "/dashboard")}
             className="group flex items-center gap-3 rounded-xl p-1.5 -m-1.5 transition-colors hover:bg-sidebar-accent/80"
           >
             <div className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-linear-to-br from-sidebar-primary to-primary text-sidebar-primary-foreground shadow-md ring-1 ring-sidebar-primary/20">
@@ -253,6 +262,8 @@ export function DashboardShell({
                       >
                         <Link
                           href={item.href}
+                          prefetch={false}
+                          onClick={(event) => hardNavigate(event, item.href)}
                           className="flex min-w-0 flex-1 items-center gap-3"
                         >
                           <Icon className="shrink-0 opacity-90" />
@@ -340,7 +351,7 @@ export function DashboardShell({
         <div className="flex flex-1 flex-col bg-linear-to-b from-muted/30 to-background px-4 py-6 md:px-8 md:py-8">
           <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6">
             {demo ? <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-[#0e2e28] px-4 py-3 text-sm text-white shadow-[0_10px_26px_rgba(14,46,40,0.16)]"><div><p className="font-semibold">This is a sample pharmacy. Ready to see your own numbers?</p><p className="text-xs leading-5 text-[#b9d8d1]">Explore freely, then create your workspace when you’re ready. Sample data may reset between visits.</p></div><Button asChild size="sm" className="bg-[#72ddc9] text-[#0e2e28] hover:bg-white"><Link href="/api/auth/clear?redirectTo=/register">Create my pharmacy</Link></Button></div> : null}
-            {!demo && billing && billing.status !== "ACTIVE" && <div className={`flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3 text-sm ${billing.status === "EXPIRED" || billing.status === "CANCELLED" ? "border-red-200 bg-red-50 text-red-950" : billing.status === "GRACE" || billing.status === "PAST_DUE" ? "border-amber-200 bg-amber-50 text-amber-950" : "border-emerald-200 bg-emerald-50 text-emerald-950"}`}><div><p className="font-semibold">{billing.status === "TRIALING" ? "Your 30-day trial is active" : billing.status === "GRACE" || billing.status === "PAST_DUE" ? "Payment is due — you’re in the grace period" : "Your subscription needs attention"}</p><p className="text-xs opacity-75">{billing.status === "TRIALING" ? `Trial ends ${new Date(billing.accessEndsAt).toLocaleDateString("en-KE")}. Subscribe any time to keep everything running.` : "Update billing to keep your team’s access uninterrupted."}</p></div>{role === "ADMIN" && <Button asChild size="sm"><Link href="/billing"><CreditCard /> Manage billing</Link></Button>}</div>}
+            {!demo && billing && billing.status !== "ACTIVE" && <div className={`flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3 text-sm ${billing.status === "EXPIRED" || billing.status === "CANCELLED" ? "border-red-200 bg-red-50 text-red-950" : billing.status === "GRACE" || billing.status === "PAST_DUE" ? "border-amber-200 bg-amber-50 text-amber-950" : "border-emerald-200 bg-emerald-50 text-emerald-950"}`}><div><p className="font-semibold">{billing.status === "TRIALING" ? "Your 30-day trial is active" : billing.status === "GRACE" || billing.status === "PAST_DUE" ? "Payment is due — you’re in the grace period" : "Your subscription needs attention"}</p><p className="text-xs opacity-75">{billing.status === "TRIALING" ? `Trial ends ${new Date(billing.accessEndsAt).toLocaleDateString("en-KE")}. Subscribe any time to keep everything running.` : "Update billing to keep your team’s access uninterrupted."}</p></div>{role === "ADMIN" && <Button asChild size="sm"><Link href="/billing" prefetch={false} onClick={(event) => hardNavigate(event, "/billing")}><CreditCard /> Manage billing</Link></Button>}</div>}
             {children}
           </div>
         </div>

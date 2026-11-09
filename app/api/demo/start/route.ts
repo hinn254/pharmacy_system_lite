@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { authInstance } from "@/auth";
 import { DEFAULT_DEMO_PASSWORD, DEMO_LOGIN_EMAILS } from "@/lib/demo-credentials";
+import { DEMO_ROLE_EMAILS, isDemoRole } from "@/lib/demo-roles";
 import { setCredentialPassword } from "@/lib/auth-users";
 import { prisma } from "@/lib/prisma";
 
@@ -14,16 +15,22 @@ export async function POST(request: NextRequest) {
   if (process.env.ALLOW_PUBLIC_DEMO === "false") {
     return Response.json({ error: "The live demo is not available right now." }, { status: 404 });
   }
-  const configuredEmail = (process.env.DEMO_LOGIN_EMAIL ?? DEMO_LOGIN_EMAILS[0]).toLowerCase().trim();
-  const preferredEmails = [...new Set([configuredEmail, DEMO_LOGIN_EMAILS[0]])];
+  const payload = (await request.json().catch(() => null)) as { role?: unknown } | null;
+  const requestedRole = isDemoRole(payload?.role) ? payload.role : "ADMIN";
+  const configuredAdminEmail = (process.env.DEMO_LOGIN_EMAIL ?? DEMO_LOGIN_EMAILS[0]).toLowerCase().trim();
+  const preferredEmails = requestedRole === "ADMIN"
+    ? [...new Set([configuredAdminEmail, DEMO_ROLE_EMAILS.ADMIN])]
+    : [DEMO_ROLE_EMAILS[requestedRole]];
   const password = process.env.SEED_DEMO_PASSWORD ?? DEFAULT_DEMO_PASSWORD;
   const preferredUsers = await prisma.user.findMany({
     where: {
       email: { in: preferredEmails },
+      role: requestedRole,
       bannedAt: null,
       deletedAt: null,
       organization: {
-        OR: [{ isDemo: true }, { slug: "main-pharmacy" }],
+        isDemo: true,
+        slug: "main-pharmacy",
       },
     },
     select: {
@@ -32,41 +39,15 @@ export async function POST(request: NextRequest) {
       organization: { select: { id: true, slug: true, isDemo: true } },
     },
   });
-  let demoUser = preferredEmails
+  const demoUser = preferredEmails
     .map((preferredEmail) => preferredUsers.find((user) => user.email === preferredEmail))
     .find((user) => user !== undefined);
 
-  // Production can predate the local seed emails or retain a stale
-  // DEMO_LOGIN_EMAIL value. Reuse an active credential administrator from the
-  // designated shared workspace instead of making the public demo unavailable.
-  const fallbackUser = await prisma.user.findFirst({
-    where: {
-      role: "ADMIN",
-      bannedAt: null,
-      deletedAt: null,
-      organization: { slug: "main-pharmacy" },
-    },
-    orderBy: { createdAt: "asc" },
-    select: {
-      id: true,
-      email: true,
-      organization: { select: { id: true, slug: true, isDemo: true } },
-    },
-  });
-  demoUser ??= fallbackUser ?? undefined;
-
   if (!demoUser) {
     return Response.json(
-      { error: "The sample pharmacy is being prepared. Please try again shortly." },
+      { error: `The ${requestedRole.toLowerCase().replace("_", " ")} demo account is being prepared. Run the production demo seed and try again.` },
       { status: 503 },
     );
-  }
-
-  if (!demoUser.organization.isDemo) {
-    await prisma.organization.update({
-      where: { id: demoUser.organization.id },
-      data: { isDemo: true, demoExpiresAt: null },
-    });
   }
 
   const email = demoUser.email;

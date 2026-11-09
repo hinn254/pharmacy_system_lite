@@ -2,11 +2,9 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { ArrowRight, LoaderCircle, Play } from "lucide-react";
 
 export function StartDemoButton() {
-  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -18,8 +16,11 @@ export function StartDemoButton() {
       const response = await fetch("/api/demo/start", { method: "POST" });
       const payload = (await response.json().catch(() => null)) as { error?: string } | null;
       if (!response.ok) throw new Error(payload?.error || "The demo could not be opened.");
-      router.push("/dashboard");
-      router.refresh();
+      // A full navigation ensures the newly issued HttpOnly session cookie is
+      // present before the first protected route is rendered. This also avoids
+      // stale unauthenticated RSC/prefetch responses in production.
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+      window.location.assign("/dashboard");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "The demo could not be opened.");
       setLoading(false);
