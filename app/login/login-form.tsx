@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { authClient } from "@/lib/auth-client";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,15 +11,21 @@ import {
   DEFAULT_DEMO_PASSWORD,
   DEMO_LOGIN_EMAILS,
 } from "@/lib/demo-credentials";
+import { DEMO_ROLE_EMAILS, type DemoRole } from "@/lib/demo-roles";
 
 const isDevelopment = process.env.NODE_ENV === "development";
 
-export function LoginForm() {
-  const router = useRouter();
+export function LoginForm({
+  initialDemoRole,
+  demoPassword,
+}: {
+  initialDemoRole: DemoRole | null;
+  demoPassword?: string;
+}) {
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") ?? "/dashboard";
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState(initialDemoRole ? DEMO_ROLE_EMAILS[initialDemoRole] : "");
+  const [password, setPassword] = useState(initialDemoRole ? demoPassword ?? DEFAULT_DEMO_PASSWORD : "");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -40,8 +46,9 @@ export function LoginForm() {
         );
         return;
       }
-      router.push(callbackUrl);
-      router.refresh();
+      // Use a document navigation so the HttpOnly session cookie is available
+      // before the first protected page request in production.
+      window.location.assign(callbackUrl);
     } finally {
       setLoading(false);
     }
@@ -51,12 +58,20 @@ export function LoginForm() {
     <form onSubmit={onSubmit} className="space-y-6">
       <div className="space-y-2">
         <h1 className="text-balance text-2xl font-semibold tracking-[-0.025em]">
-          Sign in to your pharmacy
+          {initialDemoRole ? "Sign in to the sample pharmacy" : "Sign in to your pharmacy"}
         </h1>
         <p className="text-sm leading-relaxed text-muted-foreground">
-          Use the account your pharmacy owner created or invited.
+          {initialDemoRole
+            ? "The demo credentials are ready. Press Sign in to open this role’s workspace."
+            : "Use the account your pharmacy owner created or invited."}
         </p>
       </div>
+
+      {initialDemoRole ? (
+        <div className="rounded-xl bg-emerald-50 px-3.5 py-3 text-sm leading-relaxed text-emerald-950 ring-1 ring-emerald-200">
+          This is a shared demo account. Use sample information only; never enter real patient or business data.
+        </div>
+      ) : null}
 
       {isDevelopment ? (
         <div className="space-y-3 rounded-xl bg-muted/60 p-3.5 ring-1 ring-border/70">
@@ -74,7 +89,7 @@ export function LoginForm() {
                 className="min-h-10 rounded-lg bg-background px-3 text-left text-xs font-medium capitalize text-foreground ring-1 ring-border transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 onClick={() => {
                   setEmail(demoEmail);
-                  setPassword(DEFAULT_DEMO_PASSWORD);
+                  setPassword(demoPassword ?? DEFAULT_DEMO_PASSWORD);
                   setErrorMessage(null);
                 }}
               >
